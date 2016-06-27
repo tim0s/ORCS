@@ -1,0 +1,171 @@
+#!/usr/bin/python
+
+#
+#  Copyright (c) 2009 The Trustees of Indiana University and Indiana
+#                    University Research and Technology
+#                    Corporation.  All rights reserved.
+#
+#  Author(s): Timo Schneider <timoschn@cs.indiana.edu>
+#            Torsten Hoefler <htor@cs.indiana.edu>
+#
+
+
+import re, string, sys
+
+if len(sys.argv) != 3:
+	sys.exit("Provide the .fdbs file generated with ibdiagnet and the ibnetdiscover output.");
+
+route_file=sys.argv[1]; # ibdiagnet.fdbs created with "ibdiagnet -v -o ."
+topo_file=sys.argv[2]; # ibnetdiscover.out created with "ibnetdiscover -s"
+
+
+def hex2dec(s):
+    """return the integer value of a hexadecimal string s"""
+    return int(s, 16)
+
+def stripspaces(str):
+    # erase whitespaces  
+    p = re.compile("[\s]*");
+    str = p.sub( '', str)
+    return str
+
+def stripswitch(str):
+    # erase whitespaces  
+    str = stripspaces(str)
+    p = re.compile("[\"\-S#]*");
+    str = p.sub( '', str)
+    return str
+
+def stripnum(str):
+    # erase whitespaces  
+    str = stripspaces(str)
+    p = re.compile("[\[\]]*");
+    str = p.sub( '', str)
+    return str
+
+def stripnewline(str):
+    p = re.compile("[\n]*");
+    str = p.sub( '', str)
+    return str
+
+f = open(topo_file)
+graph = {}
+d = open(route_file)
+routingtable = {}
+
+"""
+read the file and build the translation list for lids to guids
+"""
+guids = {}
+for line in f:
+    p = re.compile("^DR path.*remote"); # a node line ... get the lid-guid
+                                # translation
+    if(p.match(line)): 
+        p = re.compile("^DR path .* {(.*)} .* lid (\d*)-.*")
+        m = p.match(line)
+        if guids.has_key(int(m.group(2))) and str(m.group(1)) != str(guids[int(m.group(2))]):
+          print "double lid detected " + str(m.group(1)) + " and " + str(guids[int(m.group(2))])
+          sys.exit()
+        guids[int(m.group(2))] = m.group(1)
+        #print m.group(1) + " " + m.group(2)
+
+"""
+keys = guids.keys()
+keys.sort()
+for i in keys:
+    print i + " " + guids[i]
+"""
+    
+"""
+read the routingtable from ibdiagnet.fdbs into the dict routingtable!
+"""
+for line in d:
+    p = re.compile("^$"); # empty line
+    if(p.match(line)): continue
+    p = re.compile("^osm"); # a switch
+    if(p.match(line)):
+        # split argument-wise at ' '
+        args = string.split(line, " ")
+        switch=stripnewline(args[2])
+        p = re.compile("^0x"); # remove the 0x
+        switch = p.sub( '', switch)
+    p = re.compile("^0x"); # an entry
+    if(p.match(line)):
+        # split argument-wise at ' '
+        line=stripspaces(line)
+        args = string.split(line, ":")
+        if(args[1] == "UNREACHABLE"): continue
+        switchport=switch+":"+args[1]
+        #print switchport + " " + args[0] 
+        p = re.compile("^0x"); # remove the 0x
+        lid = p.sub( '', args[0])
+        lid = hex2dec(lid)
+        if(not guids.has_key(lid)): 
+          print "// host lid " + str(lid) + " not in " + topo_file + "- ignoring it"
+        else:
+          guid = guids[lid]
+          if(graph.has_key(switchport)):
+              # H means route to host - all routes are to hosts :-)
+              graph[switchport] = graph[switchport] + ",H" + str(guid)
+          else:
+              graph[switchport] = "H" + str(guid)
+
+
+"""
+keys = graph.keys()
+keys.sort()
+for i in keys:
+    print i + " " + graph[i]
+"""
+
+print "digraph network {" 
+
+switchmode = 0  # are we "in a" Switch block? (a block is finished by
+                # an empty line
+f.close()
+f = open(topo_file)
+for line in f:
+    p = re.compile("^$"); # an empty line -> reset switch mode
+    if(p.match(stripspaces(line))): switchmode = 0
+
+    p = re.compile("^Switch"); # we enter a new switch section
+    if(p.match(line)):
+        # split argument-wise at ' '
+        args = string.split(line, " ")
+        switch=stripswitch(args[1])
+        #print switch 
+        switchmode = 1
+
+    if(switchmode == 1): 
+        p = re.compile("^\["); # this is a port at the current switch
+        if(p.match(line)):
+            # split argument-wise at ' '
+            args = string.split(line, "\t")
+            port=stripnum(args[0])
+            source=switch + ":%.3i" % int(port)
+            target=args[1]
+            p = re.compile("\"\[");
+            target = stripnum(stripswitch(p.sub( ':', target)))
+            args = string.split(source, ":")
+            sourceswitch = args[0]
+            args = string.split(target, ":")
+            targetswitch = args[0]
+            if(graph.has_key(source)):
+                print "  \"" + sourceswitch + "\" -> \"" + targetswitch + \
+                  "\" [ comment=\"" + graph[source] + "\" ];"
+                # on request ... if we have a route to a host - print also
+                # the route from the host ...
+                p = re.compile("^H");
+                if(p.match(targetswitch)):
+                    print "  \"" + targetswitch + "\" -> \"" + sourceswitch + \
+                        "\" [ comment=\"*\" ];"
+            else:
+                print "/* there is a problem with switch:port" + str(source) + \
+                    "*/";
+                print "  \"" + sourceswitch + "\" -> \"" + targetswitch + "\";"
+
+
+    
+
+print "}"
+f.close()

@@ -1,0 +1,106 @@
+#!/usr/bin/perl
+
+=pod
+ * Copyright (c) 2009 The Trustees of Indiana University and Indiana
+ *                    University Research and Technology
+ *                    Corporation.  All rights reserved.
+ *
+ * Author(s): Timo Schneider <timoschn@cs.indiana.edu>
+ *            Torsten Hoefler <htor@cs.indiana.edu>
+ *
+=cut
+
+use lib "../cgraph_perl";
+use cgraph;
+use strict;
+use warnings;
+
+my $topofile = $ARGV[0];
+my $lftdumpfile = $ARGV[1];
+
+open(TOPO, "<", $topofile) or die "Couldn't read topology input file $topofile\n";
+my $topograph = cgraph::new_directed("network");
+
+while (<TOPO>) {
+	my $line = $_;
+	if ($line =~ m/(Switch|Hca)\s*\d+\s*\"(.*?)\"/) {
+		my $localnodename = $2;
+		while (<TOPO>) {
+			$line = $_;
+			if ($line =~ m/\[(\d+)\]\s*\"(.*?)\"\s*\[\d+\]/) {
+				my $localportnum = $1;
+				my $remotenodename = $2;
+				# draw an edge from $localnodename to remotenodename with name $localportnum
+				my $from = cgraph::add_node($topograph, $localnodename);
+				my $to = cgraph::add_node($topograph, $remotenodename);
+				my $edge = cgraph::add_edge($topograph, $from, $to, $localportnum);
+			}
+			elsif ($line =~ m/^\s*$/) { last; }
+			else { print "// Unmatched line: $line"; }
+		}
+	}
+	else { print "// Unmatched line: $line"; }
+}
+
+# we're finished parsing the topology file
+close(TOPO);
+
+cgraph::create_edge_attr($topograph, "comment", "");
+
+open(LFTS, "<", $lftdumpfile) or die "Couldn't open lfts dump inputfile $lftdumpfile\n";
+
+while (<LFTS>) {
+	my $line = $_;
+	if ($line =~ m/Unicast lids \[.*?\] of switch .*? \((.*?)\):/) {
+		my $switchname = $1;
+		while (<LFTS>) {
+			my $line = $_;
+			if ($line =~ m/\w+\s+0*(\d+)\s*:\s*\(.*?\'(.*?)\'\)/) {
+				my $outport = $1;
+				my $destnode = $2;
+				# add routing information to $switchname, edge $outport, additional destination $destnode
+				my $node = cgraph::get_node($topograph, $switchname);
+				if (defined($node)) {
+					my $edge = cgraph::agfstout($topograph, $node);
+					while (defined($edge)) {
+						#print $outport, ":", agraph::agnameof($edge), "\n";
+						if (($outport == cgraph::agnameof($edge)) and ($destnode =~ m/^H/)) {
+							my $routing = cgraph::agget($edge, "comment");
+							$routing .= ", $destnode";
+							$routing =~ s/^, //;
+							cgraph::agset($edge, "comment", $routing);
+							last;
+						}
+						$edge = cgraph::agnxtout($topograph, $edge);
+					}
+				}
+				else {
+					die "Couldnt find switch $switchname in the topology graph\n";
+				}
+			}
+			elsif ($line =~ m/valid lids dumped/) { last; }
+			# Those lines are meaningless to us...
+			elsif (($line =~ m/Lid\s+Out\s+Destination/) or ($line =~ m/Port\s+Info/)) {} 
+			else {print "Unmatched line 1: $line";}
+		}
+	}
+	# We can safely ignore this warning
+	elsif ($line =~ /ibwarn: .*? sim_connect: attached as client 1 at node/) {}
+	else {print "Unmatched line 2: $line";}
+}
+
+#add "*" as routing comment for edges from hosts to other nodes
+my $node = cgraph::agfstnode($topograph);
+while (defined($node)) {
+	my $nodename = cgraph::agnameof($node);
+	if ($nodename =~ /^H/) {
+		my $edge = cgraph::agfstout($topograph, $node);
+		while (defined($edge)) {
+			cgraph::agset($edge, "comment", "*");
+			$edge = cgraph::agnxtout($topograph, $edge);
+		}
+	}
+	$node = cgraph::agnxtnode($topograph, $node);
+}
+
+cgraph::write_to_file($topograph, "-");

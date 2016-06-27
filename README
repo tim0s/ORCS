@@ -1,0 +1,28 @@
+Execute install.sh to install the Oblivious Routing Congestion Simulator (ORCS)
+and additional tools.
+
+Everything will be installed into this directory.
+
+Citation
+--------
+Any published work which uses this software should include the following
+citation:
+----------------------------------------------------------------------
+T. Schneider, T. Hoefler, and A. Lumsdaine: ORCS: An Oblivious Routing
+Congestion Simulator. Indiana University Technical Report, TR-675 Feb.
+2009
+----------------------------------------------------------------------
+
+Changelog
+---------
+
+ORCS 1.0:
+	- Initial Release
+
+ORCS 1.1:
+	- agraph is no longer part of the graphviz distribution, therefore
+	  we ported ORCS to cgraph
+	- since ibsim is widely available now, we do not distribute it
+	  with ORCS anymore, the downside is that the patch that allowed
+	  the simulation of more than 2048 hosts is also missing, maybe we
+	  can push it to upstream?
