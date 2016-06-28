@@ -189,7 +189,7 @@ write_start_opensm() {
 	echo "export PATH=$PATHPREPEND:\$PATH" >> start_osm.sh
 	echo "export LD_LIBRARY_PATH=$LIBPATHPREPEND:\$LD_LIBRARY_PATH" >> start_osm.sh
 	echo "which opensm > /dev/null" >> start_osm.sh
-        echo "if test \$? -ne 0; then echo \"opensm\" is not in your \\\$PATH; exit 1; fi" >> start_osm.sh
+	echo "if test \$? -ne 0; then echo \"opensm\" is not in your \\\$PATH; exit 1; fi" >> start_osm.sh
 	echo "" >> start_osm.sh
 	echo "if test \$# -lt 1; then" >> start_osm.sh
 	echo "  echo \"Please provide the name of a routing engine as argument\" 1>&2" >> start_osm.sh
@@ -204,7 +204,7 @@ write_start_opensm() {
 	echo "export OSM_TMP_DIR=/tmp" >> start_osm.sh
 	echo "" >> start_osm.sh
 	echo "# start opensm, make it log to stdout" >> start_osm.sh
-        echo "opensm -R \"\$1\" -f -" >> start_osm.sh
+	echo "opensm -R \"\$1\" -f -" >> start_osm.sh
 	chmod u+x start_osm.sh
 }
 
@@ -214,7 +214,7 @@ write_dump_routes() {
 	echo "export LD_LIBRARY_PATH=$LIBPATHPREPEND:\$LD_LIBRARY_PATH" >> dump_routes.sh
 	echo "export LD_PRELOAD=$UMAD2SIMDIR/libumad2sim.so" >> dump_routes.sh
 	echo "" >> dump_routes.sh
-        echo "dump_fts" >> dump_routes.sh
+	echo "dump_fts" >> dump_routes.sh
 	chmod u+x dump_routes.sh
 }
 
