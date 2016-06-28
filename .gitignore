@@ -1,0 +1,15 @@
+*.la
+*.lo
+*.o
+*.so
+cgraph_perl/cgraph.pm
+cgraph_perl/cgraph_wrap.c
+dot2osm/dot2osm
+orcs
+simulator-sources/cmdline.c
+simulator-sources/cmdline.h
+simulator-sources/orcs
+start_ibsim.sh
+start_osm.sh
+dump_routes.sh
+ORCS-Simulator.*
