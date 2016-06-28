@@ -13,6 +13,7 @@
 #include <stdio.h>
 #include <map>
 #include <assert.h>
+#include <string.h>
 #include <cgraph.h>
 #include <gsl/gsl_histogram.h>
 #include "pattern_generator.hpp"

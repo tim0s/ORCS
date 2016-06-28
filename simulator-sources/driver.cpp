@@ -11,6 +11,7 @@
 #define MPICH_IGNORE_CXX_SEEK
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 #include <cgraph.h>
 #include <mpi.h>
 #include "pattern_generator.hpp"

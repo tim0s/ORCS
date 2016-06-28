@@ -15,6 +15,7 @@
 #include <stdio.h>
 #include <limits.h>
 #include <assert.h>
+#include <string.h>
 #include <graphviz/cgraph.h>
 
 typedef std::map<int, int> edgeinfo_table_t;
