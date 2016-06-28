@@ -141,14 +141,14 @@ void insert_into_bucket_maxcon2(cable_cong_map_t *cable_cong, ptrn_t *ptrn, name
 		//get_max_congestion(&route, edge_list, &weight);
 		get_max_congestion(&route, cable_cong, &weight);
 		if (bucket->size() < weight + 1) {
-			bucket->resize( weight+10, 0);
+			bucket->resize(weight + 10, 0);
 			//bucket->at(weight) = 0;
 		}
 		bucket->at(weight) = bucket->at(weight) + 1;
 
 		/* The smae for bigbucket */
 		if (bigbucket.size() < weight + 1) {
-			bigbucket.resize( weight+10, 0);
+			bigbucket.resize(weight + 10, 0);
 		}
 		bigbucket.at(weight) = bigbucket.at(weight) + 1;
 	}
