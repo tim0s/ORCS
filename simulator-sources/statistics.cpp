@@ -53,11 +53,11 @@ void apply_cable_cong_map_to_global_cable_cong_map(cable_cong_map_t *cable_cong)
 	cable_cong_map_t::iterator iter;
 
 	for (iter = cable_cong->begin(); iter != cable_cong->end(); iter++) {
-		 std::pair<cable_cong_map_t::iterator, bool> ret;
+		std::pair<cable_cong_map_t::iterator, bool> ret;
 		ret = cable_cong_global.insert(std::make_pair(iter->first, iter->second));
 		if (ret.second == false) {
 			ret.first->second += iter->second;
-		}	
+		}
 	}
 }
 
@@ -76,52 +76,52 @@ void add_to_bigbucket(int *buffer, int size) {
 }
 
 void insert_into_bucket(used_edges_t *edge_list, named_ptrn_t *mapping, bucket_t *bucket) {
-/*
+	/*
 	named_ptrn_t::iterator iter_ptrn;
 	for (iter_ptrn = mapping->begin(); iter_ptrn != mapping->end(); iter_ptrn++) {
-       	// we need to re-generate the route ... this could also be
-       	// stored in the previous step 
-	   	uroute_t route;
+		// we need to re-generate the route ... this could also be
+		// stored in the previous step
+		uroute_t route;
 		find_route(&route, iter_ptrn->first, iter_ptrn->second);
 
-    	int weight;
-       	get_max_congestion(&route, edge_list, &weight);
+		int weight;
+		get_max_congestion(&route, edge_list, &weight);
 		if (bucket->size() < weight + 1) {
 			bucket->resize( weight+5, 0);
 		}
-       	bucket->at(weight) = bucket->at(weight) + 1;
-   	
-		// The smae for bigbucket 
+		bucket->at(weight) = bucket->at(weight) + 1;
+
+		// The smae for bigbucket
 		if (bigbucket.size() < weight + 1) {
 			bigbucket.resize( weight+5, 0);
 		}
-       	bigbucket.at(weight) = bigbucket.at(weight) + 1;
+		bigbucket.at(weight) = bigbucket.at(weight) + 1;
 	}
 */
 }
 
 void insert_into_bucket_maxcon(used_edges_t *edge_list, ptrn_t *ptrn, namelist_t *namelist, bucket_t *bucket) {
-/*
+	/*
 	ptrn_t::iterator iter_ptrn;
 	for (iter_ptrn = ptrn->begin(); iter_ptrn != ptrn->end(); iter_ptrn++) {
-       	// we need to re-generate the route ... this could also be
-       	// stored in the previous step 
-	   	uroute_t route;
+		// we need to re-generate the route ... this could also be
+		// stored in the previous step
+		uroute_t route;
 		find_route(&route, namelist->at(iter_ptrn->first), namelist->at(iter_ptrn->second));
 
-    	int weight;
-       	get_max_congestion(&route, edge_list, &weight);
+		int weight;
+		get_max_congestion(&route, edge_list, &weight);
 		if (bucket->size() < weight + 1) {
 			bucket->resize( weight+1, 0);
 			bucket->at(weight) = 0;
 		}
-       	bucket->at(weight) = bucket->at(weight) + 1;
-   	
-		// The smae for bigbucket 
+		bucket->at(weight) = bucket->at(weight) + 1;
+
+		// The smae for bigbucket
 		if (bigbucket.size() < weight + 1) {
 			bigbucket.resize( weight+5, 0);
 		}
-       	bigbucket.at(weight) = bigbucket.at(weight) + 1;
+		bigbucket.at(weight) = bigbucket.at(weight) + 1;
 	}
 */
 }
@@ -130,27 +130,27 @@ void insert_into_bucket_maxcon2(cable_cong_map_t *cable_cong, ptrn_t *ptrn, name
 
 	ptrn_t::iterator iter_ptrn;
 	for (iter_ptrn = ptrn->begin(); iter_ptrn != ptrn->end(); iter_ptrn++) {
-       	/* we need to re-generate the route ... this could also be
-       	* stored in the previous step 
+		/* we need to re-generate the route ... this could also be
+		* stored in the previous step
 		* timos: I don't think so, It would be better to implement a "cache"
 		* into find route */
-	   	uroute_t route;
+		uroute_t route;
 		find_route(&route, namelist->at(iter_ptrn->first), namelist->at(iter_ptrn->second));
 
-    	int weight;
-       	//get_max_congestion(&route, edge_list, &weight);
-       	get_max_congestion(&route, cable_cong, &weight);
+		int weight;
+		//get_max_congestion(&route, edge_list, &weight);
+		get_max_congestion(&route, cable_cong, &weight);
 		if (bucket->size() < weight + 1) {
 			bucket->resize( weight+10, 0);
 			//bucket->at(weight) = 0;
 		}
-       	bucket->at(weight) = bucket->at(weight) + 1;
-   	
+		bucket->at(weight) = bucket->at(weight) + 1;
+
 		/* The smae for bigbucket */
 		if (bigbucket.size() < weight + 1) {
 			bigbucket.resize( weight+10, 0);
 		}
-       	bigbucket.at(weight) = bigbucket.at(weight) + 1;
+		bigbucket.at(weight) = bigbucket.at(weight) + 1;
 	}
 
 }
@@ -173,7 +173,7 @@ void print_statistics() {
 	std::cout << "Average Bandwith: " << get_avg_bandwidth() << "\n";
 	std::cout << "Bandwith Variance: " << get_var_bandwidth(get_avg_bandwidth()) << "\n";
 	std::cout << "Possible Error (99%% confidency): " << get_max_error(2.576) << "\n\n";
-	print_histogram(stdout);	
+	print_histogram(stdout);
 	print_bucket(stdout, &bigbucket);
 	std::cout << "===================\n\n";
 }
@@ -184,7 +184,7 @@ void print_vector() {
 
 	for (count=0; count<acc_bandwidths.size(); count++) {
 		std::cout << acc_bandwidths.at(count) << ", ";
-	}		
+	}
 	std::cout << "\n";
 }
 
@@ -236,12 +236,12 @@ void print_histogram(FILE *fd) {
 	double min = 9999999;
 	double max = 0;
 
-/*	for (count=0; count<acc_bandwidths.size(); count++) {
+	/*	for (count=0; count<acc_bandwidths.size(); count++) {
 		if (min>acc_bandwidths.at(count)) min = acc_bandwidths.at(count);
 		if (max<acc_bandwidths.at(count)) max = acc_bandwidths.at(count);
 	}
 */
-/*	if (max == min) {
+	/*	if (max == min) {
 		fprintf(fd, "No Histogramm, all values are the same...\n");
 		return;
 	}
@@ -282,9 +282,9 @@ void print_raw_data(FILE *fd) {
 		bucket[acc_bandwidths.at(count)]+=1;
 	}
 
-	std::map<double, int>::iterator iter;   
+	std::map<double, int>::iterator iter;
 	for( iter = bucket.begin(); iter != bucket.end(); iter++ ) {
-	   fprintf(fd, "Congestion sum of %.0f occured %i times.\n", iter->first, iter->second);
+		fprintf(fd, "Congestion sum of %.0f occured %i times.\n", iter->first, iter->second);
 	}
 
 }
@@ -305,9 +305,9 @@ void print_raw_data_max_delay(FILE *fd) {
 		bucket[acc_bandwidths.at(count)]+=1;
 	}
 
-	std::map<double, int>::iterator iter;   
+	std::map<double, int>::iterator iter;
 	for( iter = bucket.begin(); iter != bucket.end(); iter++ ) {
-	   fprintf(fd, "Delay of %.0f occured %i times.\n", iter->first, iter->second);
+		fprintf(fd, "Delay of %.0f occured %i times.\n", iter->first, iter->second);
 	}
 
 }
@@ -356,7 +356,7 @@ double get_acc_bandwidth(bucket_t *bucket) {
 	double sum=0;
 	double res=0;
 
-	for (count=1; count<bucket->size(); count++) { 
+	for (count=1; count<bucket->size(); count++) {
 
 		assert(bucket->at(0) == 0);
 		if (bucket->at(count) > 0) {
@@ -371,7 +371,7 @@ void account_stats(bucket_t *bucket) {
 	
 	acc_bandwidths.push_back(get_acc_bandwidth(bucket));
 
-/*	if (acc_bandwidths.size() > 50) {  // The confidence interval we choose only works for n>50
+	/*	if (acc_bandwidths.size() > 50) {  // The confidence interval we choose only works for n>50
 		return get_max_error(2.576);
 	}
 	else {
@@ -387,7 +387,7 @@ double account_stats_max_congestions(double max_congestions) {
 	
 	acc_bandwidths.push_back(max_congestions);
 
-	if (acc_bandwidths.size() > 50) {  // The confidence interval we choose only works for n>50 
+	if (acc_bandwidths.size() > 50) {  // The confidence interval we choose only works for n>50
 		return get_max_error(2.576);
 
 	}
@@ -456,8 +456,8 @@ void print_bucket(FILE *fd, bucket_t *bucket) {
 
 	for (count=0; count<bucket->size(); count++) {
 		if (bucket->at(count) > 0) {
-			fprintf(fd, "weight %i: %i of the %i connections (%.2lf%%)\n", 
-			count, bucket->at(count), sum,  bucket->at(count) / (double) sum * 100);
+			fprintf(fd, "weight %i: %i of the %i connections (%.2lf%%)\n",
+					count, bucket->at(count), sum,  bucket->at(count) / (double) sum * 100);
 		}
 	}
 
