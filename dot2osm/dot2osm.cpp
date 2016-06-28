@@ -15,6 +15,7 @@
 #include <stdio.h>
 #include <limits.h>
 #include <assert.h>
+#include <string.h>
 #include <graphviz/cgraph.h>
 
 typedef std::map<int, int> edgeinfo_table_t;
@@ -24,23 +25,23 @@ Agraph_t *mygraph;
 void tag_edges(Agraph_t *mygraph) {
 
 	Agedge_t *e;
-    Agnode_t *n;
+	Agnode_t *n;
 	int id_cnt;
 	char edge_id[64];
 	
 	id_cnt = 0;
 	agattr(mygraph, AGEDGE, (char *) "edge_id", (char *) "");
 	n = agfstnode(mygraph);
-    while (n != NULL) {
-        e = agfstout(mygraph, n);
-        while (e != NULL) {
+	while (n != NULL) {
+		e = agfstout(mygraph, n);
+		while (e != NULL) {
 			id_cnt++;
 			sprintf(edge_id, "%d", id_cnt);
-			agset(e, (char *) "edge_id", edge_id);		
+			agset(e, (char *) "edge_id", edge_id);
 			e = agnxtout(mygraph, e);
-        }
-        n = agnxtnode(mygraph, n);
-    }
+		}
+		n = agnxtnode(mygraph, n);
+	}
 }
 
 void read_input_graph(char *filename) {
@@ -73,7 +74,7 @@ bool is_id_in_list(edgeinfo_table_t *edgeinfo, int id) {
 	if (iter == edgeinfo->end()) {
 		return false;
 	}
-	return true;		
+	return true;
 }
 
 int get_partner_edge_id(edgeinfo_table_t *edgeinfo, int id) {
@@ -119,8 +120,8 @@ int find_partner_edge(Agraph_t *mygraph, Agedge_t *edge, edgeinfo_table_t *edgei
 	while (partner_edge != NULL) {
 		if (strcmp(agnameof(node_tail), agnameof(aghead(partner_edge))) == 0) {
 			/* we found a potential partner edge: it is going in the right direction,
-		   	but we need to check if it is already a partner edge for another edge */
-			id = get_edge_id(partner_edge);			
+			but we need to check if it is already a partner edge for another edge */
+			id = get_edge_id(partner_edge);
 			if (is_id_in_list(edgeinfo, id) == false) {
 				/* it is not, so we can just return it as the partner edge of "edge" */
 				return id;
@@ -191,9 +192,9 @@ void fill_edgeinfo_table(Agraph_t *mygraph, edgeinfo_table_t *edgeinfo) {
 				add_to_list(id, partner_id, edgeinfo);
 				add_to_list(partner_id, id, edgeinfo);
 			}
-			edge = agnxtout(mygraph, edge);		
+			edge = agnxtout(mygraph, edge);
 		}
-		node = agnxtnode(mygraph, node);		
+		node = agnxtnode(mygraph, node);
 	}
 
 }
@@ -206,7 +207,7 @@ int get_remote_portnumber(Agraph_t *mygraph, Agedge_t *edge, edgeinfo_table_t *e
 	int partnerid = get_partner_edge_id(edgeinfo, edgeid);
 
 	/* if "edge" goes from u to v, it's partner edge has to go from v to u,
-	   so we take v and iterate over all out-edges until we found the one with 
+	   so we take v and iterate over all out-edges until we found the one with
 	   the id partnerid and count the edges over which we iterated starting from
 	   one. That will be our port number */
 	
@@ -223,14 +224,14 @@ int get_remote_portnumber(Agraph_t *mygraph, Agedge_t *edge, edgeinfo_table_t *e
 
 	/* we should never reach this line, because it means
 	   we didn't find an edge meeting our conditions descriobed above
-	   which means we have an error in the partner edge detection */	
+	   which means we have an error in the partner edge detection */
 	assert(0 == 1);
 	return 0;
 }
 
 void write_node_info(FILE *fd, Agraph_t *mygraph, Agnode_t *node, edgeinfo_table_t *edgeinfo) {
 
-	/* The output file format: 
+	/* The output file format:
 
 	May <S> be the starting symbol, then the following
 	grammar describes the input file:

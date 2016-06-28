@@ -12,6 +12,7 @@
 #include <algorithm>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <cgraph.h>
 #include <queue>
 #include <map>
@@ -91,204 +92,204 @@ void merge_two_patterns_into_one(ptrn_t *ptrn1, ptrn_t *ptrn2, int comm1_size, p
 using namespace boost;
 /* this is a node on the dependency graph */
 typedef struct {
-  int name; /* the name (rank) */
-  int level; /* the level of the collective */
-  int dist; /* dist from the last investigated root node */
+	int name; /* the name (rank) */
+	int level; /* the level of the collective */
+	int dist; /* dist from the last investigated root node */
 } vertex_t;
 
 struct vertex_info_t {
-  typedef vertex_property_tag kind;
+	typedef vertex_property_tag kind;
 };
 struct vertex_dist_t {
-  typedef vertex_property_tag kind;
+	typedef vertex_property_tag kind;
 };
 struct edge_load_t {
-  typedef edge_property_tag kind;
+	typedef edge_property_tag kind;
 };
 
 typedef adjacency_list < vecS, vecS, directedS > dumgraph_t;
 
 template < typename DistMap, typename LoadMap > class bfs_edge_visitor:public default_bfs_visitor {
-  typedef typename property_traits < DistMap >::value_type T;
+	typedef typename property_traits < DistMap >::value_type T;
 public:
-  bfs_edge_visitor(DistMap tmap, LoadMap tload, T & t):m_distmap(tmap), m_loadmap(tload), m_dist(t) { }
-  template < typename Edge, typename Graph >
-  void examine_edge(Edge e, const Graph & g) const
-  {
-    //int dist = get(m_distmap, g);
-    //printf("edge ... %i %i\n", get(m_distmap, source(e,g)), get(m_loadmap,e));
-    put(m_distmap, target(e,g), get(m_distmap, source(e,g))+get(m_loadmap,e));
-  }
-  DistMap m_distmap;
-  LoadMap m_loadmap;
-  T  & m_dist;
+	bfs_edge_visitor(DistMap tmap, LoadMap tload, T & t):m_distmap(tmap), m_loadmap(tload), m_dist(t) { }
+	template < typename Edge, typename Graph >
+	void examine_edge(Edge e, const Graph & g) const
+	{
+		//int dist = get(m_distmap, g);
+		//printf("edge ... %i %i\n", get(m_distmap, source(e,g)), get(m_loadmap,e));
+		put(m_distmap, target(e,g), get(m_distmap, source(e,g))+get(m_loadmap,e));
+	}
+	DistMap m_distmap;
+	LoadMap m_loadmap;
+	T  & m_dist;
 };
 
 
 /* TODO: this function signature is ugly and could be built with the old
  * scheme and global variables and side effects */
 void simulation_dep_max_delay(gengetopt_args_info *args_info, namelist_t *namelist, int valid_until, int myrank) {
-  // Vertex properties - name
-  typedef property < vertex_name_t, std::string, property < vertex_info_t, vertex_t, property < vertex_dist_t, int > > > vertex_p;  
-  // Edge properties - routing table as comment
-  typedef property < edge_index_t, int, property < edge_load_t, int > > edge_p;
-  // the graph
-  typedef adjacency_list < vecS, vecS, directedS, vertex_p, edge_p > graph_t;
-  // the graph
-  graph_t graph(0);
+	// Vertex properties - name
+	typedef property < vertex_name_t, std::string, property < vertex_info_t, vertex_t, property < vertex_dist_t, int > > > vertex_p;
+	// Edge properties - routing table as comment
+	typedef property < edge_index_t, int, property < edge_load_t, int > > edge_p;
+	// the graph
+	typedef adjacency_list < vecS, vecS, directedS, vertex_p, edge_p > graph_t;
+	// the graph
+	graph_t graph(0);
 
 	used_edges_t edge_list;
 	cable_cong_map_t cable_cong;
 	ptrn_t::iterator iter_ptrn;
-	bucket_t bucket; 
+	bucket_t bucket;
 
-  property_map<graph_t, vertex_info_t>::type info = get(vertex_info_t(), graph);
-  typedef property_map<graph_t, edge_load_t>::type ed_load_t;
-  ed_load_t load = get(edge_load_t(), graph);
-  property_map<graph_t, vertex_index_t>::type indexmap = get(vertex_index, graph);
-  
-  std::map<int,graph_traits <graph_t>::vertex_descriptor> prevleveldests; // destinations from the previous level
+	property_map<graph_t, vertex_info_t>::type info = get(vertex_info_t(), graph);
+	typedef property_map<graph_t, edge_load_t>::type ed_load_t;
+	ed_load_t load = get(edge_load_t(), graph);
+	property_map<graph_t, vertex_index_t>::type indexmap = get(vertex_index, graph);
 
-  int level=0;
-  while (1) {
-    ptrn_t ptrn;
-    
-	//void genptrn_by_name(ptrn_t *ptrn, char *name, char *frsname, char *secname, int comm_size, int partcomm_size, int level) {
+	std::map<int,graph_traits <graph_t>::vertex_descriptor> prevleveldests; // destinations from the previous level
 
-	  genptrn_by_name(&ptrn, args_info->ptrn_arg, args_info->ptrnfst_arg, args_info->ptrnsec_arg, args_info->commsize_arg, args_info->part_commsize_arg, level++);
-    if (ptrn.size()==0) break;
-    //printf("level: %i\n", level-1);
-    if ((args_info->printptrn_given) && (myrank== 0)) {printptrn(&ptrn);}
+	int level=0;
+	while (1) {
+		ptrn_t ptrn;
 
-    std::map<int,graph_traits <graph_t>::vertex_descriptor> thisleveldests; // destinations from this level
-    std::map<int,graph_traits <graph_t>::vertex_descriptor> thislevelsources; // sources from this level
+		//void genptrn_by_name(ptrn_t *ptrn, char *name, char *frsname, char *secname, int comm_size, int partcomm_size, int level) {
 
-    
-    // first step - fill cable congestion map
-	  cable_cong_map_t cable_cong;
-    for (ptrn_t::iterator iter_ptrn = ptrn.begin(); iter_ptrn != ptrn.end(); iter_ptrn++) {
+		genptrn_by_name(&ptrn, args_info->ptrn_arg, args_info->ptrnfst_arg, args_info->ptrnsec_arg, args_info->commsize_arg, args_info->part_commsize_arg, level++);
+		if (ptrn.size()==0) break;
+		//printf("level: %i\n", level-1);
+		if ((args_info->printptrn_given) && (myrank== 0)) {printptrn(&ptrn);}
+
+		std::map<int,graph_traits <graph_t>::vertex_descriptor> thisleveldests; // destinations from this level
+		std::map<int,graph_traits <graph_t>::vertex_descriptor> thislevelsources; // sources from this level
+
+
+		// first step - fill cable congestion map
+		cable_cong_map_t cable_cong;
+		for (ptrn_t::iterator iter_ptrn = ptrn.begin(); iter_ptrn != ptrn.end(); iter_ptrn++) {
 			uroute_t route;
 			find_route(&route, namelist->at(iter_ptrn->first), namelist->at(iter_ptrn->second));
 			insert_route_into_cable_cong_map(&cable_cong, &route);
 
-    }
-      
-    // step two: build graph with weighted edges
-    //  vertices are tuples of (level, rank)
-    //  each pattern pair is an edge between two vertexes
-    //  each source-destination pair in level x is connected with an
-    //   edge with weight of the congestion
-    //  each source (level x, rank) in level x which has a destination
-    //   (level x-1, rank) is connected with an edge with weight 
-    for (ptrn_t::iterator iter_ptrn = ptrn.begin(); iter_ptrn != ptrn.end(); iter_ptrn++) {
+		}
 
-      // only consider the first valid_until ranks - no communication
-      // will cross this border (has to be guaranteed in pattern!)
-      //printf("%i %i\n", iter_ptrn->first, valid_until);
-      if((iter_ptrn->first >= valid_until) || (iter_ptrn->second >= valid_until)) continue;
+		// step two: build graph with weighted edges
+		//  vertices are tuples of (level, rank)
+		//  each pattern pair is an edge between two vertexes
+		//  each source-destination pair in level x is connected with an
+		//   edge with weight of the congestion
+		//  each source (level x, rank) in level x which has a destination
+		//   (level x-1, rank) is connected with an edge with weight
+		for (ptrn_t::iterator iter_ptrn = ptrn.begin(); iter_ptrn != ptrn.end(); iter_ptrn++) {
+
+			// only consider the first valid_until ranks - no communication
+			// will cross this border (has to be guaranteed in pattern!)
+			//printf("%i %i\n", iter_ptrn->first, valid_until);
+			if((iter_ptrn->first >= valid_until) || (iter_ptrn->second >= valid_until)) continue;
 
 			uroute_t route;
 			find_route(&route, namelist->at(iter_ptrn->first), namelist->at(iter_ptrn->second));
-      int weight;
-      get_max_congestion(&route, &cable_cong, &weight);
+			int weight;
+			get_max_congestion(&route, &cable_cong, &weight);
 
-      vertex_t source_vertex_prop, dest_vertex_prop;
-      source_vertex_prop.name = iter_ptrn->first;
-      source_vertex_prop.level = level;
-      dest_vertex_prop.name = iter_ptrn->second;
-      dest_vertex_prop.level = level;
-      
-      graph_traits <graph_t>::vertex_descriptor source_vertex = add_vertex(graph);
-      graph_traits <graph_t>::vertex_descriptor dest_vertex = add_vertex(graph);
-      put(info, source_vertex, source_vertex_prop);
-      put(info, dest_vertex, dest_vertex_prop);
-      put(info, dest_vertex, dest_vertex_prop);
+			vertex_t source_vertex_prop, dest_vertex_prop;
+			source_vertex_prop.name = iter_ptrn->first;
+			source_vertex_prop.level = level;
+			dest_vertex_prop.name = iter_ptrn->second;
+			dest_vertex_prop.level = level;
 
-      // add this level's destinations destination to prevleveldests
-      thisleveldests.insert(std::pair<int,graph_traits <graph_t>::vertex_descriptor>(iter_ptrn->second,dest_vertex));
-      thislevelsources.insert(std::pair<int,graph_traits <graph_t>::vertex_descriptor>(iter_ptrn->first,source_vertex));
+			graph_traits <graph_t>::vertex_descriptor source_vertex = add_vertex(graph);
+			graph_traits <graph_t>::vertex_descriptor dest_vertex = add_vertex(graph);
+			put(info, source_vertex, source_vertex_prop);
+			put(info, dest_vertex, dest_vertex_prop);
+			put(info, dest_vertex, dest_vertex_prop);
 
-      graph_traits <graph_t>::edge_descriptor new_edge; 
-      bool tmp;
-      tie(new_edge, tmp) = add_edge(source_vertex, dest_vertex, graph);
+			// add this level's destinations destination to prevleveldests
+			thisleveldests.insert(std::pair<int,graph_traits <graph_t>::vertex_descriptor>(iter_ptrn->second,dest_vertex));
+			thislevelsources.insert(std::pair<int,graph_traits <graph_t>::vertex_descriptor>(iter_ptrn->first,source_vertex));
 
-      //printf("put weight %i\n", weight);
-      put(load, new_edge, weight);
-    }
+			graph_traits <graph_t>::edge_descriptor new_edge;
+			bool tmp;
+			tie(new_edge, tmp) = add_edge(source_vertex, dest_vertex, graph);
 
-    /*for(std::map<int,graph_traits <graph_t>::vertex_descriptor>::iterator iter=prevleveldests.begin(); iter!=prevleveldests.end(); ++iter) {
-      printf("%i\n", *iter);
-    }*/
+			//printf("put weight %i\n", weight);
+			put(load, new_edge, weight);
+		}
 
-    for(std::map<int,graph_traits <graph_t>::vertex_descriptor>::iterator iter=thislevelsources.begin(); iter!=thislevelsources.end(); ++iter) {
-      std::map<int,graph_traits <graph_t>::vertex_descriptor>::iterator prevleveldest=prevleveldests.find((*iter).first);
-      if(prevleveldests.end() != prevleveldest) {
-        //printf("%i in previous destinations\n", (*iter).first);
-        // create edge between the two vertices
-        graph_traits <graph_t>::edge_descriptor new_edge; 
-        bool tmp;
-        tie(new_edge, tmp) = add_edge((*prevleveldest).second, (*iter).second, graph);
+		/*for(std::map<int,graph_traits <graph_t>::vertex_descriptor>::iterator iter=prevleveldests.begin(); iter!=prevleveldests.end(); ++iter) {
+	  printf("%i\n", *iter);
+	}*/
 
-        put(load, new_edge, 0); // this edge has zero weight
-      } else {
-        //printf("%i not in previous destinations\n", (*iter).first);
-      }
-    }
+		for(std::map<int,graph_traits <graph_t>::vertex_descriptor>::iterator iter=thislevelsources.begin(); iter!=thislevelsources.end(); ++iter) {
+			std::map<int,graph_traits <graph_t>::vertex_descriptor>::iterator prevleveldest=prevleveldests.find((*iter).first);
+			if(prevleveldests.end() != prevleveldest) {
+				//printf("%i in previous destinations\n", (*iter).first);
+				// create edge between the two vertices
+				graph_traits <graph_t>::edge_descriptor new_edge;
+				bool tmp;
+				tie(new_edge, tmp) = add_edge((*prevleveldest).second, (*iter).second, graph);
 
-    prevleveldests = thisleveldests;
-  }
-  //printf("weighted dependency graph built\n");
+				put(load, new_edge, 0); // this edge has zero weight
+			} else {
+				//printf("%i not in previous destinations\n", (*iter).first);
+			}
+		}
 
-  // traverse graph from the roots and report longest path to any edge
-  // TODO: there are cycles if there is cyclic communication in a level :-(
-  {
-    ptrn_t ptrn;
-    //genptrn_by_name(&ptrn, args_info->ptrn_arg, args_info->commsize_arg, 0);
-	  genptrn_by_name(&ptrn, args_info->ptrn_arg, args_info->ptrnfst_arg, args_info->ptrnsec_arg, args_info->commsize_arg, args_info->part_commsize_arg, 0);
-    int max=0;
-    for (ptrn_t::iterator iter_ptrn = ptrn.begin(); iter_ptrn != ptrn.end(); iter_ptrn++) {
-      if((iter_ptrn->first >= valid_until) || (iter_ptrn->second >= valid_until)) continue;
+		prevleveldests = thisleveldests;
+	}
+	//printf("weighted dependency graph built\n");
 
-      /* do a dijkstra along every first communication edge */
-      /*std::vector<graph_traits<graph_t>::vertex_descriptor> p(num_vertices(graph));
-      std::vector<int> d(num_vertices(graph));
+	// traverse graph from the roots and report longest path to any edge
+	// TODO: there are cycles if there is cyclic communication in a level :-(
+	{
+		ptrn_t ptrn;
+		//genptrn_by_name(&ptrn, args_info->ptrn_arg, args_info->commsize_arg, 0);
+		genptrn_by_name(&ptrn, args_info->ptrn_arg, args_info->ptrnfst_arg, args_info->ptrnsec_arg, args_info->commsize_arg, args_info->part_commsize_arg, 0);
+		int max=0;
+		for (ptrn_t::iterator iter_ptrn = ptrn.begin(); iter_ptrn != ptrn.end(); iter_ptrn++) {
+			if((iter_ptrn->first >= valid_until) || (iter_ptrn->second >= valid_until)) continue;
 
-      // compare function is greater, thus it searches longest paths!
-      dijkstra_shortest_paths(graph, (*iter_ptrn).first, &p[0], &d[0], load, indexmap,
-                              std::less<int>(), closed_plus<int>(),
-                              (std::numeric_limits<int>::max)(), 0,
-                              default_dijkstra_visitor()); */
+			/* do a dijkstra along every first communication edge */
+			/*std::vector<graph_traits<graph_t>::vertex_descriptor> p(num_vertices(graph));
+	  std::vector<int> d(num_vertices(graph));
 
-      // do BFS and attach distance to root to each vertex
-      typedef property_map<graph_t, vertex_dist_t>::type vert_dist_t;
-      vert_dist_t m_dist = get(vertex_dist_t(), graph);
-      int dist=0;
-      bfs_edge_visitor <vert_dist_t,ed_load_t>vis(m_dist, load, dist);
-      breadth_first_search(graph, (*iter_ptrn).first, visitor(vis));
+	  // compare function is greater, thus it searches longest paths!
+	  dijkstra_shortest_paths(graph, (*iter_ptrn).first, &p[0], &d[0], load, indexmap,
+							  std::less<int>(), closed_plus<int>(),
+							  (std::numeric_limits<int>::max)(), 0,
+							  default_dijkstra_visitor()); */
 
-      // loop over all vertices and find biggest time
-      graph_traits<graph_t>::vertex_iterator viter, viter_end;
-      for (tie(viter, viter_end) = vertices(graph); viter != viter_end; ++viter) {
-      //for(int i=0; i<num_vertices(graph); i++) {
-      //  int dist = d[i];
-        int dist = get(m_dist, *viter);
-        if(std::numeric_limits<int>::max () != dist) {
-          if(dist > max) max=dist;
-          //printf("dist: %i\n", dist);
-        }
-      }
-    }
-    // TODO: put into bin
-    //printf("[%i] max: %i\n", myrank, max);
-	account_stats_max_congestions(max);
-  }
+			// do BFS and attach distance to root to each vertex
+			typedef property_map<graph_t, vertex_dist_t>::type vert_dist_t;
+			vert_dist_t m_dist = get(vertex_dist_t(), graph);
+			int dist=0;
+			bfs_edge_visitor <vert_dist_t,ed_load_t>vis(m_dist, load, dist);
+			breadth_first_search(graph, (*iter_ptrn).first, visitor(vis));
+
+			// loop over all vertices and find biggest time
+			graph_traits<graph_t>::vertex_iterator viter, viter_end;
+			for (tie(viter, viter_end) = vertices(graph); viter != viter_end; ++viter) {
+				//for(int i=0; i<num_vertices(graph); i++) {
+				//  int dist = d[i];
+				int dist = get(m_dist, *viter);
+				if(std::numeric_limits<int>::max () != dist) {
+					if(dist > max) max=dist;
+					//printf("dist: %i\n", dist);
+				}
+			}
+		}
+		// TODO: put into bin
+		//printf("[%i] max: %i\n", myrank, max);
+		account_stats_max_congestions(max);
+	}
 }
 
 void simulation_hist_max_cong(ptrn_t *ptrn, namelist_t *namelist, int state) {
 	used_edges_t edge_list;
 	cable_cong_map_t cable_cong;
 	ptrn_t::iterator iter_ptrn;
-	bucket_t bucket; 
+	bucket_t bucket;
 
 	if (state == RUN) {
 		int i = 0;
@@ -311,7 +312,7 @@ void simulation_get_cable_cong(ptrn_t *ptrn, namelist_t *namelist, int state) {
 	used_edges_t edge_list;
 	cable_cong_map_t cable_cong;
 	ptrn_t::iterator iter_ptrn;
-	bucket_t bucket; 
+	bucket_t bucket;
 
 	if (state == RUN) {
 		int i = 0;
@@ -330,7 +331,7 @@ void simulation_hist_effective_bandwidth(ptrn_t *ptrn, namelist_t *namelist, int
 	used_edges_t edge_list;
 	cable_cong_map_t cable_cong;
 	ptrn_t::iterator iter_ptrn;
-	static bucket_t bucket; 
+	static bucket_t bucket;
 
 	if (state == RUN) {
 		for (iter_ptrn = ptrn->begin(); iter_ptrn != ptrn->end(); iter_ptrn++) {
@@ -342,8 +343,8 @@ void simulation_hist_effective_bandwidth(ptrn_t *ptrn, namelist_t *namelist, int
 		std::sort(edge_list.begin(), edge_list.end());
 		insert_into_bucket_maxcon2(&cable_cong, ptrn, namelist, &bucket);
 
-//		account_stats(&bucket);
-//		bucket.clear();
+		//		account_stats(&bucket);
+		//		bucket.clear();
 
 	}
 	else if (state == ACCOUNT) {
@@ -385,18 +386,18 @@ void simulation_sum_max_cong(ptrn_t *ptrn, namelist_t *namelist, int state) {
 
 void print_namelist(namelist_t *namelist) {
 	std::cout << "\n\nUsed subset of nodes: \n=================";
-    if(namelist->size() == 0) printf(" namelist empty! ============\n");
-    else {
-      for (int i=0; i<namelist->size()-1; i++) {
-		std::cout << "\n" << namelist->at(i);
-	  }
-	  std::cout << "\n" <<namelist->at(namelist->size()-1) << "\n===============\n\n";
-    }
+	if(namelist->size() == 0) printf(" namelist empty! ============\n");
+	else {
+		for (int i=0; i<namelist->size()-1; i++) {
+			std::cout << "\n" << namelist->at(i);
+		}
+		std::cout << "\n" <<namelist->at(namelist->size()-1) << "\n===============\n\n";
+	}
 }
 
 void find_route(uroute_t *route, std::string n1, std::string n2) {
 
-/**
+	/**
  * This function returns the list of edges used for the communication from the
  * node named n1 to the node named n2 in a vector of edges.
  * */
@@ -405,7 +406,7 @@ void find_route(uroute_t *route, std::string n1, std::string n2) {
 	Agnode_t *start;
 	Agnode_t *dest;
 	edge_t edge;
-	edgeid_t edgeid; 
+	edgeid_t edgeid;
 	std::map<std::string, int> theMap;
 	std::pair<std::map<std::string, int>::iterator, bool> theMap_returnval;
 
@@ -433,7 +434,7 @@ void find_route(uroute_t *route, std::string n1, std::string n2) {
 					return;
 				}
 				//edgeid.assign(agget(e, ((char *) "edge_id")));
-			  edgeid = atoi(agget(e, ((char *) "edge_id")));
+				edgeid = atoi(agget(e, ((char *) "edge_id")));
 				route->push_back(edgeid);
 				start = aghead(e);
 				break;
@@ -448,25 +449,25 @@ void find_route(uroute_t *route, std::string n1, std::string n2) {
 
 int contains_target(char *comment, char *target) {
 
-/** 
+	/**
  * This function checks if our target appears in the commma seperated list of
  * targets, encoded as a comment in the dot file. Returns 1 if yes, 0
  * otherwise. A single star '*' in the comment matches any target.
  * */
 
-//	printf("Comment: %s\n", commentin);
-//	printf("Target: %s\n", target);
+	//	printf("Comment: %s\n", commentin);
+	//	printf("Target: %s\n", target);
 
 	char *buffer;
 	char *result;
 	char *buffer2;
-//	char *comment;
+	//	char *comment;
 	int i,j;
 
-/*	comment = (char *) malloc((strlen(commentin) + 1) * sizeof(char));
+	/*	comment = (char *) malloc((strlen(commentin) + 1) * sizeof(char));
 	j = 0;
 	for (i=0; i<strlen(commentin); i++) {
-		if ((commentin[i] != ' ') and 
+		if ((commentin[i] != ' ') and
 		   (commentin[i] != '\t') and
 		   (commentin[i] != '\n')) {
 			comment[j] = commentin[i];
@@ -485,17 +486,17 @@ int contains_target(char *comment, char *target) {
 		if (result == NULL) break;
 	}
 	free(buffer);
-//	free(comment);
+	//	free(comment);
 	if (result == NULL) return 0;
 	else return 1;
 }
 
 void get_name_list(namelist_t *namelist) {
 	
-/** This function places an array of strings (the node names) at the given
+	/** This function places an array of strings (the node names) at the given
  * position and returns the number of elements in that array. This list should
  * be generated once and can be used for mapping the node names to integers. The
- * list is NOT random. 
+ * list is NOT random.
  * */
 	
 	Agnode_t *node;
@@ -519,7 +520,7 @@ void generate_random_mapping(named_ptrn_t *mapping, ptrn_t *ptrn) {
 	namelist_t namelist;
 	get_name_list(&namelist);
 
-    std::vector<bool> bucket(namelist.size(), false);
+	std::vector<bool> bucket(namelist.size(), false);
 	edge_t edge;
 	ptrn_t::iterator iter;
 	int counter;
@@ -527,7 +528,7 @@ void generate_random_mapping(named_ptrn_t *mapping, ptrn_t *ptrn) {
 	int pos;
 
 	for (counter = 0; counter < namelist.size(); counter++) {
-    	myrand = mtrand.randInt(namelist.size()-counter-1);
+		myrand = mtrand.randInt(namelist.size()-counter-1);
 		pos=0;
 		while (true) {
 			if (bucket[pos] == false) {
@@ -542,20 +543,20 @@ void generate_random_mapping(named_ptrn_t *mapping, ptrn_t *ptrn) {
 		}
 	}
 	
-	mapping->clear();	
+	mapping->clear();
 
-    for (iter = ptrn->begin(); iter != ptrn->end(); iter++) {
+	for (iter = ptrn->begin(); iter != ptrn->end(); iter++) {
 		if ((iter->first >= namelist.size()) || (iter->second >= namelist.size())) {
 			printf("Error during mapping: The pattern contains more nodes (> %i) than\n", iter->first>iter->second?iter->first:iter->second);
 			printf("there are hosts in the graph (%i).\n", (int)namelist.size());
-			exit(EXIT_FAILURE);	
+			exit(EXIT_FAILURE);
 		}
 		else {
-        	edge.first = namelist[num_mapped[iter->first]];
+			edge.first = namelist[num_mapped[iter->first]];
 			edge.second = namelist[num_mapped[iter->second]];
 			mapping->push_back(edge);
 		}
-    }
+	}
 }
 
 void generate_random_namelist(namelist_t *namelist, int comm_size) {
@@ -566,10 +567,10 @@ void generate_random_namelist(namelist_t *namelist, int comm_size) {
 	int pos;
 	int myrand;
 
-    // read name list from agraph file
+	// read name list from agraph file
 	get_name_list(&tmp_namelist);
 
-    std::vector<bool> bucket(tmp_namelist.size(), false);
+	std::vector<bool> bucket(tmp_namelist.size(), false);
 	
 	for (counter=1; counter <= comm_size; counter++) {
 		myrand = mtrand.randInt(tmp_namelist.size() - counter);
@@ -591,11 +592,11 @@ void generate_random_namelist(namelist_t *namelist, int comm_size) {
 }
 
 void generate_linear_namelist_bfs(namelist_t *namelist, int comm_size) {
-	 
+
 	Agnode_t *node;
 	std::queue<Agnode_t*> queue;
-    // HTOR: didn't you say that one is not supposed to use the pointer
-    // to the char returned by libagraph?
+	// HTOR: didn't you say that one is not supposed to use the pointer
+	// to the char returned by libagraph?
 	std::map<char*, int> color;
 	Agedge_t *e;
 	
@@ -626,7 +627,7 @@ void generate_linear_namelist_bfs(namelist_t *namelist, int comm_size) {
 
 void shuffle_namelist(namelist_t *namelist) {
 	
-    std::vector<bool> bucket(namelist->size(), false);
+	std::vector<bool> bucket(namelist->size(), false);
 	namelist_t shuffled_list;
 	MTRand mtrand;
 	int myrand;
@@ -652,7 +653,7 @@ void shuffle_namelist(namelist_t *namelist) {
 void insert_route_into_cable_cong_map(cable_cong_map_t *cable_cong, uroute_t *route) {
 
 	uroute_t::iterator iter_route;
-  for (iter_route = route->begin(); iter_route != route->end(); iter_route++) {
+	for (iter_route = route->begin(); iter_route != route->end(); iter_route++) {
 		std::pair<cable_cong_map_t::iterator, bool> ret;
 
 		ret = cable_cong->insert(std::make_pair(*iter_route, 1 ) );
@@ -668,18 +669,18 @@ void insert_route_into_uedgelist(used_edges_t *edge_list, route_t *route) {
 	used_edges_t::iterator iter_uedge;
 	bool found = false;
 
-    for (iter_route = route->begin(); iter_route != route->end(); iter_route++) {
-    	for(iter_uedge = edge_list->begin(); iter_uedge != edge_list->end(); iter_uedge++) {
+	for (iter_route = route->begin(); iter_route != route->end(); iter_route++) {
+		for(iter_uedge = edge_list->begin(); iter_uedge != edge_list->end(); iter_uedge++) {
 			if (iter_uedge->edge == *iter_route) {
 				iter_uedge->usage++;
-                
-                /* add the hosts using this link */
-                std::pair<std::string, std::string> pair;
-                pair.first = route->front().first;
-                pair.second= route->back().second;
-                iter_uedge->peers.push_back(pair);
+
+				/* add the hosts using this link */
+				std::pair<std::string, std::string> pair;
+				pair.first = route->front().first;
+				pair.second= route->back().second;
+				iter_uedge->peers.push_back(pair);
 				
-                found = true;
+				found = true;
 				break;
 			}
 		}
@@ -688,16 +689,16 @@ void insert_route_into_uedgelist(used_edges_t *edge_list, route_t *route) {
 			used_edge_entry.edge = *iter_route;
 			used_edge_entry.usage = 1;
 
-            /* add the hosts using this link */
-            std::pair<std::string, std::string> pair;
-            pair.first = route->front().first;
-            pair.second= route->back().second;
-            used_edge_entry.peers.push_back(pair);
+			/* add the hosts using this link */
+			std::pair<std::string, std::string> pair;
+			pair.first = route->front().first;
+			pair.second= route->back().second;
+			used_edge_entry.peers.push_back(pair);
 			
-            edge_list->push_back(used_edge_entry);
+			edge_list->push_back(used_edge_entry);
 		}
 		found = false;
-    }
+	}
 }
 
 std::string lookup(int nodenumber, namelist_t *namelist) {
@@ -709,29 +710,29 @@ std::string lookup(int nodenumber, namelist_t *namelist) {
 		counter++;
 	}
 
-  return *iter;
+	return *iter;
 }
 
 void printmapping(named_ptrn_t *mapping) {
 
-    named_ptrn_t::iterator iter;
+	named_ptrn_t::iterator iter;
 
 	printf("   Mapping   \n=============\n");
-    for(iter = mapping->begin(); iter != mapping->end(); iter++) {
-        printf("%s -> %s\n", iter->first.c_str(), iter->second.c_str());
-    }
+	for(iter = mapping->begin(); iter != mapping->end(); iter++) {
+		printf("%s -> %s\n", iter->first.c_str(), iter->second.c_str());
+	}
 	printf("=============\n\n");
 }
 
 void get_max_congestion(uroute_t *route, cable_cong_map_t *cable_cong, int *weight) {
 
-    uroute_t::iterator route_iter;
-    *weight = 0;
+	uroute_t::iterator route_iter;
+	*weight = 0;
 	int loc_weight = 0;
-   
+
 	/* go over the physical edges of the route */
 	for (route_iter = route->begin(); route_iter != route->end(); route_iter++) {
-        
+
 		cable_cong_map_t::iterator it;
 		it = cable_cong->find(*route_iter);
 		if (it == cable_cong->end()) {
@@ -774,30 +775,30 @@ void read_input_graph(char *filename) {
 
 void tag_edges(Agraph_t *mygraph) {
 	Agedge_t *e;
-    Agnode_t *n;
+	Agnode_t *n;
 	int id_cnt;
 	char edge_id[64];
 	
 	id_cnt = 0;
 	agattr(mygraph, AGEDGE, (char *) "edge_id", (char *) "");
 	n = agfstnode(mygraph);
-    while (n != NULL) {
-        e = agfstout(mygraph, n);
-        while (e != NULL) {
+	while (n != NULL) {
+		e = agfstout(mygraph, n);
+		while (e != NULL) {
 			sprintf(edge_id, "%d", id_cnt);
 			id_cnt++;
-			agset(e, (char *) "edge_id", edge_id);		
+			agset(e, (char *) "edge_id", edge_id);
 			//printf("Edge-ID: %s\n", agget(e, (char *) "edge_id"));
 			e = agnxtout(mygraph, e);
-        }
-        n = agnxtnode(mygraph, n);
-    }
+		}
+		n = agnxtnode(mygraph, n);
+	}
 }
 
 void write_graph_with_congestions() {
 
 	Agedge_t *e;
-    Agnode_t *n;
+	Agnode_t *n;
 	char cong_str[64];
 	char color_str[128];
 
@@ -805,8 +806,8 @@ void write_graph_with_congestions() {
 	agattr(mygraph, AGEDGE, (char *) "color", (char *) "");
 	n = agfstnode(mygraph);
 	while (n != NULL) {
-        e = agfstout(mygraph, n);
-        while (e != NULL) {
+		e = agfstout(mygraph, n);
+		while (e != NULL) {
 			char *eid = agget(e, (char *) "edge_id");
 			float cong = get_congestion_by_edgeid(atoi(eid));
 			cong /= get_max_from_global_cong_map();
@@ -817,9 +818,9 @@ void write_graph_with_congestions() {
 			float s = 0.9;
 			float v = 0.9;
 			sprintf(color_str, "%f %f %f", h, s, v);
-			agset(e, (char *) "color", (char *) &color_str);		
+			agset(e, (char *) "color", (char *) &color_str);
 			e = agnxtout(mygraph, e);
-        }
+		}
 		n = agnxtnode(mygraph, n);
 	}
 	agwrite(mygraph, stdout);
@@ -869,37 +870,37 @@ void bcast_namelist(namelist_t *namelist, int comm_size, int rank) {
 	int count = 0;
 	char *buffer;
 	
-    /* pack buffer on  rank 0 */
-    if(!rank) {
-      for (int i=0; i<namelist->size(); i++) {
-          count += strlen(namelist->at(i).c_str()) + 1;
-      }
+	/* pack buffer on  rank 0 */
+	if(!rank) {
+		for (int i=0; i<namelist->size(); i++) {
+			count += strlen(namelist->at(i).c_str()) + 1;
+		}
 
-      buffer = (char *) malloc(count * sizeof(char));
-      char *pos = buffer;
-      for (int i=0; i<namelist->size(); i++) {
-          strcpy(pos, namelist->at(i).c_str());
-          pos += strlen(namelist->at(i).c_str()) + 1;
-      }
-    }
+		buffer = (char *) malloc(count * sizeof(char));
+		char *pos = buffer;
+		for (int i=0; i<namelist->size(); i++) {
+			strcpy(pos, namelist->at(i).c_str());
+			pos += strlen(namelist->at(i).c_str()) + 1;
+		}
+	}
 
-    /* bcast buffer size */
-    MPI_Bcast(&count, 1, MPI_INT, 0, MPI_COMM_WORLD);
+	/* bcast buffer size */
+	MPI_Bcast(&count, 1, MPI_INT, 0, MPI_COMM_WORLD);
 	if(rank) buffer = (char *) malloc(count * sizeof(char));
 
-    /* bcast buffer data */
-    MPI_Bcast(buffer, count, MPI_CHAR, 0, MPI_COMM_WORLD);
+	/* bcast buffer data */
+	MPI_Bcast(buffer, count, MPI_CHAR, 0, MPI_COMM_WORLD);
 
-    /* unpack buffer data on clients */
-    if(rank) {
-      char *pos = buffer;
-      while (pos < buffer + count) {
-          namelist->push_back(pos);
-          pos += namelist->back().length() + 1;
-      }
-    }
+	/* unpack buffer data on clients */
+	if(rank) {
+		char *pos = buffer;
+		while (pos < buffer + count) {
+			namelist->push_back(pos);
+			pos += namelist->back().length() + 1;
+		}
+	}
 	
-    free(buffer);
+	free(buffer);
 }
 
 void print_commandline_options(FILE *fd, gengetopt_args_info *args_info) {
@@ -967,7 +968,7 @@ void exchange_results2(int mynode, int allnodes) {
 	double *buffer = get_results(&size);
 	double *recvbuf = (double *) malloc(size * allnodes * sizeof(double));
 
-/*
+	/*
 	if (mynode == 0) {
 		for (int p=1; p<allnodes; p++) {
 			MPI_Status status;
@@ -981,7 +982,7 @@ void exchange_results2(int mynode, int allnodes) {
 */
 	MPI_Gather(buffer, size, MPI_DOUBLE, recvbuf, size, MPI_DOUBLE, 0, MPI_COMM_WORLD);
 	if (mynode == 0) {
-			insert_results(recvbuf, size * allnodes);
+		insert_results(recvbuf, size * allnodes);
 	}
 }
 
@@ -993,31 +994,31 @@ void generate_namelist_by_name(char *method, namelist_t *namelist, int comm_size
 /* quick and dirty allreduce for maps<int,int> where the maximum key is
  * not too large and the keyspace is rather dense */
 void allreduce_contig_int_map(std::map<int,int> *map) {
-  // find maximum key element in map
-  unsigned int max = 0;
-  for(std::map<int, int>::iterator i=map->begin(); i!=map->end(); i++) {
-    if(i->first > max) max = i->first;
-  }
+	// find maximum key element in map
+	unsigned int max = 0;
+	for(std::map<int, int>::iterator i=map->begin(); i!=map->end(); i++) {
+		if(i->first > max) max = i->first;
+	}
 
-  // allreduce maximum key element
-  int gmax;
-  MPI_Allreduce (&max, &gmax, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
-  //printf("max: %i %i\n", max, gmax);
-  
-  int *sfield = (int*)calloc(gmax+1,sizeof(int));
-  int *rfield = (int*)calloc(gmax+1,sizeof(int));
-  // fill the field with the map contents
-  for(std::map<int, int>::iterator i=map->begin(); i!=map->end(); i++) {
-    assert(i->first <= gmax);
-    sfield[i->first] = i->second;
-  }
+	// allreduce maximum key element
+	int gmax;
+	MPI_Allreduce (&max, &gmax, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
+	//printf("max: %i %i\n", max, gmax);
 
-  MPI_Allreduce(sfield, rfield, gmax+1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
+	int *sfield = (int*)calloc(gmax+1,sizeof(int));
+	int *rfield = (int*)calloc(gmax+1,sizeof(int));
+	// fill the field with the map contents
+	for(std::map<int, int>::iterator i=map->begin(); i!=map->end(); i++) {
+		assert(i->first <= gmax);
+		sfield[i->first] = i->second;
+	}
 
-  for(int i=0; i<gmax+1;i++) {
-    if(rfield[i]) (*map)[i] = rfield[i];
-  }
+	MPI_Allreduce(sfield, rfield, gmax+1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
 
-  free(sfield);
-  free(rfield);
+	for(int i=0; i<gmax+1;i++) {
+		if(rfield[i]) (*map)[i] = rfield[i];
+	}
+
+	free(sfield);
+	free(rfield);
 }
