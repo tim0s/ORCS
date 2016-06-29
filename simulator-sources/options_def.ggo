@@ -12,8 +12,9 @@ option  "num_runs" n "Number of simulation runs per pattern" int default="1" opt
 option  "ptrn" p "Which pattern to use" values="rand","null","bisect","bisect_fb_sym","tree","bruck","gather","scatter","ring","recdbl","2neighbor","4neighbor","6neighbor","ptrnvsptrn" default="bisect" optional
 option  "ptrnfst" f "Which pattern to use" values="rand","null","bisect","bisect_fb_sym","tree","bruck","gather","scatter","ring","recdbl","2neighbor","4neighbor","6neighbor" default="bisect" optional
 option  "ptrnsec" c "Which pattern to use" values="rand","null","bisect","bisect_fb_sym","tree","bruck","gather","scatter", "ring","recdbl","2neighbor","4neighbor","6neighbor" default="bisect" optional
-option  "subset" - "How to determine subset of nodes to use" values="rand","linear_bfs" default="rand" optional
+option  "subset" - "How to determine subset of nodes to use" values="rand","linear_bfs","guid_order_asc","guid_order_desc" default="rand" optional
 option  "metric" - "Which metric sould be used" values="sum_max_cong","hist_max_cong","hist_acc_band","dep_max_delay","get_cable_cong" default="hist_max_cong" optional
 option  "ptrn_level" l "Level of pattern" int default="-1" optional dependon="ptrn"
 option  "input_file" i "dot graph input file" string default="-" optional
 option  "output_file" o "histogram output file" string default="-" optional
+option  "node_ordering_file" z "if you need some of the nodes to have a fixed order and not participate in the suffling process between runs, you can provide a node order file with the guid of the nodes (one per line)" string default="-" optional

@@ -8,6 +8,12 @@
 
 #define RUN 100
 #define ACCOUNT 101
+#define PARSE_GUID_BUFLEN  256
+
+/* IN and OUT are used to indicate if a function's
+ * parameter is used as input or output */
+#define IN
+#define OUT
 
 
 /* typedefs */
@@ -37,6 +43,7 @@ class used_edge_t {
 typedef std::vector<used_edge_t> used_edges_t;
 typedef std::map<edgeid_t, int> cable_cong_map_t;
 typedef std::vector<std::string> namelist_t;
+typedef std::vector<unsigned long long> guidlist_t;
 
 /* prototypes */
 void merge_two_patterns_into_one(ptrn_t *ptrn1, ptrn_t *ptrn2, int comm1_size, ptrn_t *ptrn_res);
@@ -55,17 +62,28 @@ void print_namelist(namelist_t *namelist);
 void generate_namelist_by_name(char *method, namelist_t *namelist, int comm_size);
 void generate_random_namelist(namelist_t *namelist, int comm_size);
 void generate_linear_namelist_bfs(namelist_t *namelist, int comm_size);
+void generate_linear_namelist_guid_order(namelist_t *namelist, int comm_size, bool asc);
 void shuffle_namelist(namelist_t *namelist);
 void simulate(used_edges_t *edge_list,  ptrn_t *ptrn, int num_runs);
 void find_route(uroute_t *route, std::string n1, std::string n2);
 int contains_target(char *comment, char *target);
-void get_name_list(namelist_t *namelist);
+unsigned long long convert_nodename_to_guid(std::string nodename);
+void get_guidlist_from_namelist(IN namelist_t *namelist,
+								OUT guidlist_t *guidlist);
+void get_namelist_from_guidlist(IN guidlist_t *guidlist,
+								IN namelist_t *complete_namelist,
+								OUT namelist_t *namelist);
+void get_namelist_from_graph(OUT namelist_t *namelist);
+void get_namelist_from_graph(OUT namelist_t *namelist,
+							 OUT guidlist_t *guidlist);
 void generate_random_mapping(named_ptrn_t *mapping, ptrn_t *ptrn);
 void insert_route_into_uedgelist(used_edges_t *edge_list, route_t *route);
 std::string lookup(int nodenumber, namelist_t *namelist);
 void printmapping(named_ptrn_t *mapping);
 void my_mpi_init(int *argc, char ***argv, int *rank, int *comm_size);
 void read_input_graph(char *filename);
+void read_node_ordering(IN char *filename,
+						OUT guidlist_t *guidorder_list);
 void bcast_namelist(namelist_t *namelist, int comm_size, int rank);
 void exchange_results(int mynode, int allnodes, double result);
 void exchange_results2(int mynode, int allnodes);
