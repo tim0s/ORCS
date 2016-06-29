@@ -21,35 +21,96 @@
 #include <string.h>
 #include <cgraph.h>
 #include <algorithm>
+#include <boost/assign/std/vector.hpp>
 #include "pattern_generator.hpp"
 #include "simulator.hpp"
+
+template< class T >
+struct next
+{
+	T seed;
+	next( T seed ) : seed(seed)
+	{ }
+
+	T operator()()
+	{
+		return seed++;
+	}
+};
 
 /* generates a random communication pattern for a communicator of size
  * comm_size */
 void genptrn_rand(int comm_size, int level, ptrn_t *ptrn) {
-	/* this pattern generator draws two nodes out of the bucket and puts
-	 * them as communication pair into the pattern */
+	/* this pattern generator draws two nodes, ensures that they are not the same
+	 * in order to avoid having nodes sending traffic to themselves (wight 0), and
+	 * puts them as communication pairs into the pattern */
 	MTRand mtrand;
-	std::vector<bool> bucket(comm_size, false);
-	int counter;
-	int myrand;
-	int pos;
+	std::vector<int> available_dests_bucket;
+	int src = 0, dst = 0;
+	int myrand_pos;
 
 	if(level != 0) return;
 
-	for (counter = 0; counter < comm_size; counter++) {
-		myrand = mtrand.randInt(comm_size-counter-1);
-		pos=0;
-		while (true) {
-			if (bucket[pos] == false) {
-				if (myrand == 0) {
-					bucket[pos] = true;
-					ptrn->push_back(std::pair<int, int>(counter, pos));
+	/* Initialize the available_dests_bucket vector with values from 0 to comm_size - 1
+	 * Then we will use this vector to pull random destinations and form random
+	 * source -> destination pairs. Everytime we pull a value we remove it from the
+	 * bucket, thus, ensuring that we will not add any duplicate destinations */
+	boost::assign::push_back(available_dests_bucket).repeat_fun(comm_size, next<int>(0));
+
+	for (src = 0; src < comm_size; src++) {
+		while(true) {
+			myrand_pos = mtrand.randInt((comm_size - 1) - src);
+
+			dst = available_dests_bucket.at(myrand_pos);
+			/* We do not want to end up with pairs communicating with themeselves: e.g. 5 -> 5
+			 *
+			 * So add the pattern pair only if counter != pos.
+			 */
+			if (src != dst) {
+				ptrn->push_back(std::pair<int, int>(src, dst));
+				available_dests_bucket.erase(available_dests_bucket.begin() + myrand_pos);
+				break;
+			} else {
+				/* If we run in this "else" statement, then src == dst.
+				 *
+				 * If this is not the last loop in the for statetement (src == (comm_size - 1)),
+				 * re-run in the while loop in order to re-draw a random number for the given src.
+				 */
+				if (src == (comm_size - 1)) {
+					/* However, there is a small chance that we may end up in a deadlock situation if we
+					 * reach the last pair and  all the previous random pairs are different. Then the only
+					 * possible last pair left is src == dst. Consider the following example:
+					 *
+					 * comm_size = 4:
+					 * Random pairs:
+					 * 0 -> 2
+					 * 1 -> 0
+					 * 2 -> 1
+					 * 3 -> 3 <------ Only choice left. We want to avoid this deadlock situation.
+					 *
+					 * In this case we want to swap a random number from the already added pairs...
+					 */
+					/* 1. Choose a new random tmp_pair from ptrn */
+					myrand_pos = mtrand.randInt(ptrn->size() - 1);
+					pair_t &tmp_pair = ptrn->at(myrand_pos);
+
+					/* 2. Store the destination value from the tmp_pair in variable dst. */
+					dst = tmp_pair.second;
+
+					/* 3. Change the destination value of the tmp_pair to the last available
+					 * value which is equal to (comm_size - 1). */
+					tmp_pair.second = (comm_size - 1);
+
+					/* 4. Use the stored dst value for the last pair. */
+					ptrn->push_back(std::pair<int, int>(src, dst));
+
+					/* At this point there is only one element left in the vector, so
+					 * just delete the .begin() */
+					available_dests_bucket.erase(available_dests_bucket.begin());
+
 					break;
 				}
-				myrand--;
 			}
-			pos++;
 		}
 	}
 }
