@@ -491,17 +491,84 @@ int contains_target(char *comment, char *target) {
 	else return 1;
 }
 
-void get_name_list(namelist_t *namelist) {
+unsigned long long convert_nodename_to_guid(std::string nodename) {
+	unsigned long long guid;
+
+	/* The first character in the node names is always H.
+	 * Remove the first character in order to allow the conversion from hex to long */
+	nodename.erase(nodename.begin());
+
+	/* Convert the string from hex to long and add in the guids array */
+	guid = strtoul(nodename.data(), NULL, 16);
+
+	return guid;
+}
+
+void get_guidlist_from_namelist(IN namelist_t *namelist,
+								OUT guidlist_t *guidlist) {
+
+	/** This function gets a GUID list from the provided node namelist **/
+
+	int i;
+
+	guidlist->clear();
+
+	for (i = 0; i < namelist->size(); i++)
+		guidlist->push_back(convert_nodename_to_guid(namelist->at(i)));
+}
+
+void get_namelist_from_guidlist(IN guidlist_t *guidlist,
+								IN namelist_t *complete_namelist,
+								OUT namelist_t *namelist) {
+
+	/** This function will return a namelist with the same order as
+	 *  the one in the guidlist **/
+
+	guidlist_t tmp_complete_guidlist;
+	namelist_t tmp_complete_namelist;
+	int i, j;
+
+	namelist->clear();
+
+	/* We do not want to alter the input, so copy the input in a temporary
+	 * vector since we are going to make changes to it. */
+	tmp_complete_namelist = *complete_namelist;
+
+	/* Get a numeric GUID list from the complete list. We will use this
+	 * list as a basis for our comparisons */
+	get_guidlist_from_namelist(complete_namelist, &tmp_complete_guidlist);
+
+	for (i = 0; i < guidlist->size(); i++) {
+		for (j = 0; j < tmp_complete_guidlist.size(); j++) {
+			if (guidlist->at(i) == tmp_complete_guidlist.at(j)) {
+				namelist->push_back(tmp_complete_namelist.at(j));
+
+				/* Remove the already added elements in order to potentially
+				 * reduce the number of iterations in the next round */
+				tmp_complete_guidlist.erase(tmp_complete_guidlist.begin() + j);
+				tmp_complete_namelist.erase(tmp_complete_namelist.begin() + j);
+				break;
+			}
+		}
+	}
+}
+
+void get_namelist_from_graph(namelist_t *namelist) {
+	get_namelist_from_graph(namelist, NULL);
+}
+
+void get_namelist_from_graph(OUT namelist_t *namelist,
+				   OUT guidlist_t *guidlist) {
 	
 	/** This function places an array of strings (the node names) at the given
- * position and returns the number of elements in that array. This list should
- * be generated once and can be used for mapping the node names to integers. The
- * list is NOT random.
- * */
+	 * position and returns the number of elements in that array. This list should
+	 * be generated once and can be used for mapping the node names to integers. The
+	 * list is NOT random.
+	 **/
 	
 	Agnode_t *node;
 	std::string nodename;
-	
+
 	node = agfstnode(mygraph);
 	while (node != NULL) {
 		nodename = (std::string) agnameof(node);
@@ -510,6 +577,11 @@ void get_name_list(namelist_t *namelist) {
 		}
 		node = agnxtnode(mygraph, node);
 	}
+
+	/* If a guidlist has been provided (not NULL), then get a list
+	 * of numeric GUIDs as well */
+	if (guidlist)
+		get_guidlist_from_namelist(namelist, guidlist);
 }
 
 void generate_random_mapping(named_ptrn_t *mapping, ptrn_t *ptrn) {
@@ -518,7 +590,7 @@ void generate_random_mapping(named_ptrn_t *mapping, ptrn_t *ptrn) {
 	std::vector<int> num_mapped;
 
 	namelist_t namelist;
-	get_name_list(&namelist);
+	get_namelist_from_graph(&namelist);
 
 	std::vector<bool> bucket(namelist.size(), false);
 	edge_t edge;
@@ -568,7 +640,7 @@ void generate_random_namelist(namelist_t *namelist, int comm_size) {
 	int myrand;
 
 	// read name list from agraph file
-	get_name_list(&tmp_namelist);
+	get_namelist_from_graph(&tmp_namelist);
 
 	std::vector<bool> bucket(tmp_namelist.size(), false);
 	
@@ -622,7 +694,52 @@ void generate_linear_namelist_bfs(namelist_t *namelist, int comm_size) {
 			}
 		}
 	}
+}
 
+void generate_linear_namelist_guid_order(namelist_t *namelist, int comm_size, bool asc = true) {
+
+	namelist_t tmp_namelist;
+	guidlist_t guids, sorted_guids;
+	unsigned long long curr_guid;
+	int counter, pos;
+
+	/* Read name list from agraph file and get a list of numeric GUIDs as well in order
+	 * to be able to sort the guids numerically. */
+	get_namelist_from_graph(&tmp_namelist, &guids);
+
+	/* Copy the current guids list in a new list that we are going to sort.
+	 * Note: the equal operator copies a vector by value and not by reference,
+	 * which is what we want in this case. */
+	sorted_guids = guids;
+
+	/* Sort the numeric GUIDs */
+	if (asc)
+		/* In ascending order... */
+		std::sort(sorted_guids.begin(), sorted_guids.end());
+	else
+		/* In descending order... */
+		std::sort(sorted_guids.begin(), sorted_guids.end(), std::greater<unsigned long long>());
+
+	/* Find the first comm_size nodes and push them into the namelist */
+	for (counter=0; counter < comm_size; counter++) {
+		/* Use the curr_guid from the 'sorted_guids' vector as the guid
+		 * that needs to be matched and pushed in the namelist vector. */
+		curr_guid = sorted_guids.at(counter);
+		for(pos = 0; pos < tmp_namelist.size(); pos++) {
+			/* Iterate through the temporary namelist vector */
+			if (curr_guid == guids.at(pos)) {
+				/* If the guid matches the node in the current position,
+				 * add the node in the namelist vector and remove it from
+				 * the 'tmp_namelist' and 'guids' vectors. in order to
+				 * reduce the potential number of iterations in the next
+				 * round */
+				namelist->push_back(tmp_namelist.at(pos));
+				tmp_namelist.erase(tmp_namelist.begin() + pos);
+				guids.erase(guids.begin() + pos);
+				break;
+			}
+		}
+	}
 }
 
 void shuffle_namelist(namelist_t *namelist) {
@@ -746,11 +863,13 @@ void get_max_congestion(uroute_t *route, cable_cong_map_t *cable_cong, int *weig
 	*weight = loc_weight;
 }
 
-void my_mpi_init(int *argc, char ***argv, int *rank, int *comm_size) {
+void my_mpi_init(int *argc, char **argv[], int *rank, int *comm_size) {
 	MPI_Init(argc, argv);
 	MPI_Comm_size(MPI_COMM_WORLD, comm_size);
 	MPI_Comm_rank(MPI_COMM_WORLD, rank);
-	std::cout << "Hello from " << *rank << " of " << *comm_size << std::endl;
+	std::cout << "Hello from MPI node with rank " << *rank << ".\n" <<
+				 "Total MPI nodes participating in the simulation: " <<
+				 *comm_size <<  std::endl << std::endl;
 }
 
 void read_input_graph(char *filename) {
@@ -793,6 +912,53 @@ void tag_edges(Agraph_t *mygraph) {
 		}
 		n = agnxtnode(mygraph, n);
 	}
+}
+
+void read_node_ordering(IN char *filename,
+						OUT guidlist_t *guidorder_list) {
+
+	char line[PARSE_GUID_BUFLEN];
+	FILE *fd;
+
+	if (!strcmp(filename, "-"))
+		return;
+
+	if (!(fd = fopen(filename, "r"))) {
+		printf("Could not open node ordering file %s\n", filename);
+		exit(EXIT_FAILURE);
+	}
+
+	while (fgets(line, sizeof(line), fd)) {
+		u_int64_t guid;
+		char *p, *e;
+
+		p = line;
+		while (isspace(*p))
+			p++;
+		if (*p == '\0' || *p == '\n' || *p == '#')
+			continue;
+
+		guid = strtoull(p, &e, 16);
+		if (e == p || (!isspace(*e) && *e != '#' && *e != '\0')) {
+			fclose(fd);
+			printf("Error when reading from file %s\n"
+				   "GUID %s looks like it is not a valid GUID (expected a valid hex number per line in the file)\n",
+				   filename, p);
+			exit(EXIT_FAILURE);
+		}
+
+		p = e;
+		while (isspace(*p))
+			p++;
+
+		e = strpbrk(p, "\n");
+		if (e)
+			*e = '\0';
+
+		guidorder_list->push_back(guid);
+	}
+
+	fclose(fd);
 }
 
 void write_graph_with_congestions() {
@@ -989,6 +1155,8 @@ void exchange_results2(int mynode, int allnodes) {
 void generate_namelist_by_name(char *method, namelist_t *namelist, int comm_size) {
 	if (strcmp(method, "rand") == 0) {generate_random_namelist(namelist, comm_size);}
 	if (strcmp(method, "linear_bfs") == 0) {generate_linear_namelist_bfs(namelist, comm_size);}
+	if (strcmp(method, "guid_order_asc") == 0) {generate_linear_namelist_guid_order(namelist, comm_size);}
+	if (strcmp(method, "guid_order_desc") == 0) {generate_linear_namelist_guid_order(namelist, comm_size, false);}
 }
 
 /* quick and dirty allreduce for maps<int,int> where the maximum key is
