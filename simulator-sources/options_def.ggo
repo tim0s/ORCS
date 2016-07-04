@@ -17,4 +17,4 @@ option  "metric" - "Which metric sould be used" values="sum_max_cong","hist_max_
 option  "ptrn_level" l "Level of pattern" int default="-1" optional dependon="ptrn"
 option  "input_file" i "dot graph input file" string default="-" optional
 option  "output_file" o "histogram output file" string default="-" optional
-option  "node_ordering_file" z "if you need some of the nodes to have a fixed order and not participate in the suffling process between runs, you can provide a node order file with the guid of the nodes (one per line)" string default="-" optional
+option  "node_ordering_file" - "if you need some of the nodes to have a fixed order and not participate in the suffling process between runs, you can provide a node order file with the guid of the nodes (one per line)" string default="-" optional
