@@ -70,12 +70,6 @@ def int_to_hex_str(number, hex_length = -2, prefix_with_0x = False):
 
     return hex_str
 
-def stripspaces(str):
-    # erase whitespaces
-    p = re.compile("[\s]*");
-    str = p.sub( '', str)
-    return str
-
 r = quick_regexp()
 graph = {}
 lid_to_guid = {}
