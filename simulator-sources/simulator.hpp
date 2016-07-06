@@ -1,3 +1,6 @@
+#ifndef SIMULATOR_HPP
+#define SIMULATOR_HPP
+
 #include <vector>
 #include <map>
 #include <utility>
@@ -97,4 +100,6 @@ void write_graph_with_congestions();
 #ifndef MYGLOBALS
 #define MYGLOBALS
     extern Agraph_t *mygraph;
+#endif
+
 #endif

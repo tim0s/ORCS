@@ -290,7 +290,7 @@ int main(int argc, char *argv[]) {
 				//void genptrn_by_name(ptrn_t *ptrn, char *name, char *frsname, char *secname, int comm_size, int partcomm_size, int level) {
 				genptrn_by_name(&ptrn, args_info.ptrn_arg, args_info.ptrnfst_arg, args_info.ptrnsec_arg, args_info.commsize_arg, args_info.part_commsize_arg, level);
 
-				if ((args_info.printptrn_given) && (mynode == 0)) {printptrn(&ptrn);}
+				if ((args_info.printptrn_given) && (mynode == 0)) { printptrn(&ptrn, &final_namelist); }
 				if (ptrn.size()==0 || (args_info.ptrn_level_arg > -1 && level > args_info.ptrn_level_arg)) {break;}
 
 				simulation_with_metric(args_info.metric_arg, &ptrn, &final_namelist, RUN);

@@ -159,7 +159,7 @@ void simulation_dep_max_delay(gengetopt_args_info *args_info, namelist_t *nameli
 		genptrn_by_name(&ptrn, args_info->ptrn_arg, args_info->ptrnfst_arg, args_info->ptrnsec_arg, args_info->commsize_arg, args_info->part_commsize_arg, level++);
 		if (ptrn.size()==0) break;
 		//printf("level: %i\n", level-1);
-		if ((args_info->printptrn_given) && (myrank== 0)) {printptrn(&ptrn);}
+		if ((args_info->printptrn_given) && (myrank== 0)) { printptrn(&ptrn, namelist); }
 
 		std::map<int,graph_traits <graph_t>::vertex_descriptor> thisleveldests; // destinations from this level
 		std::map<int,graph_traits <graph_t>::vertex_descriptor> thislevelsources; // sources from this level

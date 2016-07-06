@@ -1,5 +1,5 @@
 package "orcs"
-version "1.0"
+version "1.2-beta"
 option  "printptrn" - "Print Pattern" flag off
 option  "routequal" - "Assess quality of Routing Tables" flag off
 option  "printnamelist" - "Print Namelist" flag off

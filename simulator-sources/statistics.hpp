@@ -1,3 +1,6 @@
+#ifndef STATISTICS_HPP
+#define STATISTICS_HPP
+
 /* Typedefs */
 typedef std::vector<int> bucket_t;
 
@@ -29,3 +32,5 @@ void apply_cable_cong_map_to_global_cable_cong_map(cable_cong_map_t *cable_cong)
 int get_congestion_by_edgeid(int eid);
 int get_max_from_global_cong_map();
 int get_min_from_global_cong_map();
+
+#endif

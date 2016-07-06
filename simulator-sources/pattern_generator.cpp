@@ -380,7 +380,7 @@ void genptrn_recdbl(int comm_size, int level, ptrn_t *ptrn) {
 	} else return;
 }
 
-void printptrn(ptrn_t *ptrn) {
+void printptrn(ptrn_t *ptrn, namelist_t *namelist) {
 
 	ptrn_t::iterator iter;
 
@@ -389,11 +389,11 @@ void printptrn(ptrn_t *ptrn) {
 		return;
 	}
 
-	std::cout << "\nUsed Pattern:\n===========\n";
+	std::cout << "\nUsed Pattern:\n=================\n";
 	for(iter = ptrn->begin(); iter != ptrn->end(); iter++) {
-		printf("%i -> %i\n", iter->first, iter->second);
+		printf("% 5i -> %-5i   |   %s -> %s\n", iter->first, iter->second, namelist->at(iter->first).data(), namelist->at(iter->second).data());
 	}
-	std::cout << "==========\n";
+	std::cout << "=================\n";
 }
 
 void genptrn_by_name(ptrn_t *ptrn, char *name, char *frsname, char *secname, int comm_size, int partcomm_size, int level) {
