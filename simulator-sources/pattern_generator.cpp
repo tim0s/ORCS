@@ -211,12 +211,12 @@ void genptrn_scatter(int comm_size, int level,  ptrn_t *ptrn) {
 }
 
 /* generates a nearest neighbor communication pattern on a rectangular grid, all communications are done at the same time - so there is only one level */
-static inline void node_to_coords(int node, int xmax, int *x, int *y) { *x = node%xmax; *y = node/xmax; };
+static inline void node_to_coords(int node, int xmax, int *x, int *y) { *x = node%xmax; *y = node/xmax; }
 static inline void coords_to_node(int xmax, int ymax, int x, int y, int *node) { 
 	if(x < 0) x = xmax+x; if(x>=xmax) x = x%xmax;
 	if(y < 0) y = ymax+y; if(y>=ymax) y = y%ymax;
 	*node = y*xmax + x;
-};
+}
 void genptrn_neighbor2d(int comm_size, int level, ptrn_t *ptrn) {
 
 	if(level > 0) return;
