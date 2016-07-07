@@ -12,6 +12,9 @@
 typedef std::pair<int, int> pair_t; 
 typedef std::vector<pair_t> ptrn_t;
 
+void genptrn_bisect(int comm_size, int level, ptrn_t *ptrn);
+void genptrn_bisect_fb_sym(int comm_size, int level, ptrn_t *ptrn);
+void genptrn_null(int comm_size, int level, ptrn_t *ptrn);
 void genptrn_rand(int comm_size, int level, ptrn_t *ptrn);
 void genptrn_scatter(int comm_size, int level, ptrn_t *ptrn);
 void genptrn_gather(int comm_size, int level, ptrn_t *ptrn);
@@ -20,9 +23,11 @@ void genptrn_bruck(int comm_size, int level, ptrn_t *ptrn);
 void genptrn_ring(int comm_size, int level, ptrn_t *ptrn);
 void genptrn_neighbor2d(int comm_size, int level, ptrn_t *ptrn);
 void genptrn_recdbl(int comm_size, int level, ptrn_t *ptrn);
+void genptrn_nneighbor(int nprocs, int level, int neighbors, ptrn_t *ptrn);
+void genptrn_nreceivers(int comm_size, int level, int num_receivers, ptrn_t *ptrn);
 
 void printptrn(ptrn_t *ptrn, namelist_t *namelist);
 
-void genptrn_by_name(ptrn_t *ptrn, char *name, char *frsname, char *secname, int comm_size, int partcomm_size, int level);
+void genptrn_by_name(ptrn_t *ptrn, char *ptrnname, void *ptrnarg, char *frsname, char *secname, int comm_size, int partcomm_size, int level);
 
 #endif

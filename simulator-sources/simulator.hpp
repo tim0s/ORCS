@@ -20,7 +20,12 @@
 
 
 /* typedefs */
-typedef std::pair<int, int> pair_t; 
+typedef struct {
+	gengetopt_args_info args_info;
+	void *ptrnarg;
+} cmdargs_t;
+
+typedef std::pair<int, int> pair_t;
 typedef std::vector<pair_t> ptrn_t;
 
 typedef std::pair<std::string, std::string> edge_t; 
@@ -57,7 +62,7 @@ void simulation_with_metric(char *metric_name, ptrn_t *ptrn, namelist_t *namelis
 void simulation_hist_max_cong(ptrn_t *ptrn, namelist_t *namelist, int state);
 void simulation_hist_effective_bandwidth(ptrn_t *ptrn, namelist_t *namelist, int state);
 void simulation_sum_max_cong(ptrn_t *ptrn, namelist_t *namelist, int state);
-void simulation_dep_max_delay(gengetopt_args_info *args_info, namelist_t *namelist, int valid_until, int myrank);
+void simulation_dep_max_delay(cmdargs_t *cmdargs, namelist_t *namelist, int valid_until, int myrank);
 void simulation_get_cable_cong(ptrn_t *ptrn, namelist_t *namelist, int state);
 void print_commandline_options(FILE *fd, gengetopt_args_info *args_info);
 void print_results(gengetopt_args_info *args_info, int mynode, int allnodes);

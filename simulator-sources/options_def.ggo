@@ -9,9 +9,10 @@ option  "commsize" s "Communicator Size" int default="0" optional
 option  "part_commsize" z "First part communicator Size" int default="2" optional
 option  "checkinputfile" - "Check the input file for broken routes" flag off
 option  "num_runs" n "Number of simulation runs per pattern" int default="1" optional
-option  "ptrn" p "Which pattern to use" values="rand","null","bisect","bisect_fb_sym","tree","bruck","gather","scatter","ring","recdbl","2neighbor","4neighbor","6neighbor","ptrnvsptrn" default="bisect" optional
-option  "ptrnfst" f "Which pattern to use" values="rand","null","bisect","bisect_fb_sym","tree","bruck","gather","scatter","ring","recdbl","2neighbor","4neighbor","6neighbor" default="bisect" optional
-option  "ptrnsec" c "Which pattern to use" values="rand","null","bisect","bisect_fb_sym","tree","bruck","gather","scatter", "ring","recdbl","2neighbor","4neighbor","6neighbor" default="bisect" optional
+option  "ptrn" p "Which pattern to use" values="rand","null","bisect","bisect_fb_sym","tree","bruck","gather","scatter","ring","recdbl","neighbor","receivers","ptrnvsptrn" default="bisect" optional
+option  "ptrnarg" a "If one of the patterns needs an argument, use this parameter to provide it" string typestr="PTRNARG" dependon="ptrn" optional
+option  "ptrnfst" f "Which pattern to use" values="rand","null","bisect","bisect_fb_sym","tree","bruck","gather","scatter","ring","recdbl","neighbor","receivers" default="bisect" optional
+option  "ptrnsec" c "Which pattern to use" values="rand","null","bisect","bisect_fb_sym","tree","bruck","gather","scatter", "ring","recdbl","neighbor","receivers" default="bisect" optional
 option  "subset" - "How to determine subset of nodes to use" values="rand","linear_bfs","guid_order_asc","guid_order_desc" default="rand" optional
 option  "metric" - "Which metric sould be used" values="sum_max_cong","hist_max_cong","hist_acc_band","dep_max_delay","get_cable_cong" default="hist_max_cong" optional
 option  "ptrn_level" l "Level of pattern" int default="-1" optional dependon="ptrn"
