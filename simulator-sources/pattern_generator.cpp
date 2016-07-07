@@ -411,7 +411,7 @@ void printptrn(ptrn_t *ptrn, namelist_t *namelist) {
 
 void genptrn_by_name(ptrn_t *ptrn, char *ptrnname, void *ptrnarg, char *frsname, char *secname, int comm_size, int partcomm_size, int level) {
 	
-	printf("Name: %s\n Size: %i\n Level: %i\n", ptrnname, comm_size, level);
+	//printf("Name: %s\n Size: %i\n Level: %i\n", ptrnname, comm_size, level);
 	
 	ptrn->clear();
 	if (strcmp(ptrnname, "rand") == 0) { genptrn_rand(comm_size, level, ptrn); }
