@@ -25,6 +25,7 @@
 Agraph_t *mygraph;
 
 extern void perform_sanity_checks_in_args(IN OUT cmdargs_t *cmdargs);
+extern void cleanup_args(IN cmdargs_t *cmdargs);
 
 int main(int argc, char *argv[]) {
 	
@@ -325,7 +326,7 @@ int main(int argc, char *argv[]) {
 	MPI_Finalize();
 	agclose(mygraph);
 
-	free(cmdargs.ptrnarg);
+	cleanup_args(&cmdargs);
 
 	return EXIT_SUCCESS;
 }
