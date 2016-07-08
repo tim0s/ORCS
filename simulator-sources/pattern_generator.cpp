@@ -211,12 +211,12 @@ void genptrn_scatter(int comm_size, int level,  ptrn_t *ptrn) {
 }
 
 /* generates a nearest neighbor communication pattern on a rectangular grid, all communications are done at the same time - so there is only one level */
-static inline void node_to_coords(int node, int xmax, int *x, int *y) { *x = node%xmax; *y = node/xmax; };
+static inline void node_to_coords(int node, int xmax, int *x, int *y) { *x = node%xmax; *y = node/xmax; }
 static inline void coords_to_node(int xmax, int ymax, int x, int y, int *node) { 
 	if(x < 0) x = xmax+x; if(x>=xmax) x = x%xmax;
 	if(y < 0) y = ymax+y; if(y>=ymax) y = y%ymax;
 	*node = y*xmax + x;
-};
+}
 void genptrn_neighbor2d(int comm_size, int level, ptrn_t *ptrn) {
 
 	if(level > 0) return;
@@ -380,7 +380,17 @@ void genptrn_recdbl(int comm_size, int level, ptrn_t *ptrn) {
 	} else return;
 }
 
-void printptrn(ptrn_t *ptrn) {
+void genptrn_nreceivers(int comm_size, int level, int num_receivers, ptrn_t *ptrn) {
+//	if (level != 0) return;
+	printf("RUNNING IN RECEIVERS: %d\n", num_receivers);
+//	for (int counter = 0; counter < comm_size-1; counter++) {
+//		ptrn->push_back(std::pair<int, int>(0, 1));
+//	}
+	/* NOT YET IMPLEMENTED */
+	exit(EXIT_FAILURE);
+}
+
+void printptrn(ptrn_t *ptrn, namelist_t *namelist) {
 
 	ptrn_t::iterator iter;
 
@@ -389,44 +399,49 @@ void printptrn(ptrn_t *ptrn) {
 		return;
 	}
 
-	std::cout << "\nUsed Pattern:\n===========\n";
+	printf("\nUsed Pattern:\n=================\n");
 	for(iter = ptrn->begin(); iter != ptrn->end(); iter++) {
-		printf("%i -> %i\n", iter->first, iter->second);
+		printf("% 5i -> %-5i   |   %s -> %s\n",
+			   iter->first, iter->second,
+			   namelist->at(iter->first).data(),
+			   namelist->at(iter->second).data());
 	}
-	std::cout << "==========\n";
+	printf("=================\n");
 }
 
-void genptrn_by_name(ptrn_t *ptrn, char *name, char *frsname, char *secname, int comm_size, int partcomm_size, int level) {
+void genptrn_by_name(ptrn_t *ptrn, char *ptrnname, void *ptrnarg, char *frsname, char *secname, int comm_size, int partcomm_size, int level) {
 	
-	//printf("Name: %s\n Size: %i\n Level: %i\n", name, comm_size, level);
+	//printf("Name: %s\n Size: %i\n Level: %i\n", ptrnname, comm_size, level);
 	
 	ptrn->clear();
-	if (strcmp(name, "rand") == 0) {genptrn_rand(comm_size, level, ptrn);}
-	else if (strcmp(name, "bisect") == 0) {genptrn_bisect(comm_size, level, ptrn);}
-	else if (strcmp(name, "null") == 0) {genptrn_null(comm_size, level, ptrn);}
-	else if (strcmp(name, "bisect_fb_sym") == 0) {genptrn_bisect_fb_sym(comm_size, level, ptrn);}
-	else if (strcmp(name, "tree") == 0) {genptrn_tree(comm_size, level, ptrn);}
-	else if (strcmp(name, "bruck") == 0) {genptrn_bruck(comm_size, level, ptrn);}
-	else if (strcmp(name, "gather") == 0) {genptrn_gather(comm_size, level, ptrn);}
-	else if (strcmp(name, "scatter") == 0) {genptrn_scatter(comm_size, level, ptrn);}
-	else if (strcmp(name, "neighbor2d") ==0) {genptrn_neighbor2d(comm_size, level, ptrn);}
-	else if (strcmp(name, "ring") == 0) {genptrn_ring(comm_size, level, ptrn);}
-	else if (strcmp(name, "recdbl") == 0) {genptrn_recdbl(comm_size, level, ptrn);}
-	else if (strcmp(name, "2neighbor") == 0) {genptrn_nneighbor(comm_size, level, 2, ptrn);}
-	else if (strcmp(name, "4neighbor") == 0) {genptrn_nneighbor(comm_size, level, 4, ptrn);}
-	else if (strcmp(name, "6neighbor") == 0) {genptrn_nneighbor(comm_size, level, 6, ptrn);}
-	else if (strcmp(name, "ptrnvsptrn") == 0) {
+	if (strcmp(ptrnname, "rand") == 0) { genptrn_rand(comm_size, level, ptrn); }
+	else if (strcmp(ptrnname, "bisect") == 0) { genptrn_bisect(comm_size, level, ptrn); }
+	else if (strcmp(ptrnname, "null") == 0) { genptrn_null(comm_size, level, ptrn); }
+	else if (strcmp(ptrnname, "bisect_fb_sym") == 0) { genptrn_bisect_fb_sym(comm_size, level, ptrn); }
+	else if (strcmp(ptrnname, "tree") == 0) { genptrn_tree(comm_size, level, ptrn); }
+	else if (strcmp(ptrnname, "bruck") == 0) { genptrn_bruck(comm_size, level, ptrn); }
+	else if (strcmp(ptrnname, "gather") == 0) { genptrn_gather(comm_size, level, ptrn); }
+	else if (strcmp(ptrnname, "scatter") == 0) { genptrn_scatter(comm_size, level, ptrn); }
+	else if (strcmp(ptrnname, "neighbor2d") ==0) { genptrn_neighbor2d(comm_size, level, ptrn); }
+	else if (strcmp(ptrnname, "ring") == 0) { genptrn_ring(comm_size, level, ptrn); }
+	else if (strcmp(ptrnname, "recdbl") == 0) { genptrn_recdbl(comm_size, level, ptrn); }
+	else if (strcmp(ptrnname, "neighbor") == 0) { genptrn_nneighbor(comm_size, level, *((int*)ptrnarg), ptrn); }
+	else if (strcmp(ptrnname, "receivers") == 0) { genptrn_nreceivers(comm_size, level, *((int*)ptrnarg), ptrn); }
+	else if (strcmp(ptrnname, "ptrnvsptrn") == 0) {
 		static int level_ptrn2 = 0;
 		ptrn_t ptrn1, ptrn2;
-		genptrn_by_name(&ptrn1, frsname, (char *)"", (char *)"", partcomm_size, 0, level);
-		genptrn_by_name(&ptrn2, secname, (char *)"", (char *)"", comm_size - partcomm_size, 0, level_ptrn2);
+		genptrn_by_name(&ptrn1, frsname, ptrnarg, (char *)"", (char *)"", partcomm_size, 0, level);
+		genptrn_by_name(&ptrn2, secname, ptrnarg, (char *)"", (char *)"", comm_size - partcomm_size, 0, level_ptrn2);
 		if ((ptrn2.size()==0) && (ptrn1.size()!=0)) {
 			level_ptrn2=0;
-			genptrn_by_name(&ptrn2, secname, (char *)"", (char *)"", comm_size - partcomm_size, 0, level_ptrn2);
+			genptrn_by_name(&ptrn2, secname, ptrnarg, (char *)"", (char *)"", comm_size - partcomm_size, 0, level_ptrn2);
 		}
 		level_ptrn2++;
 		merge_two_patterns_into_one(&ptrn1, &ptrn2, partcomm_size, ptrn);
 	}
-	else printf("%s pattern not implemented\n", name);
+	else {
+		printf("ERROR: %s pattern not implemented\n", ptrnname);
+		exit(EXIT_FAILURE);
+	}
 }
 

@@ -24,6 +24,8 @@
 
 Agraph_t *mygraph;
 
+extern void perform_sanity_checks_in_args(IN OUT cmdargs_t *cmdargs);
+
 int main(int argc, char *argv[]) {
 	
 	// MPI variables, comm_rank and comm_size
@@ -32,18 +34,22 @@ int main(int argc, char *argv[]) {
 	guidlist_t guidlist, complete_guidlist, nodeorder_guidlist;
 	int i, j;
 
-	gengetopt_args_info args_info;
+	cmdargs_t cmdargs;
 
-	if (cmdline_parser(argc, argv, &args_info) != 0) exit(EXIT_FAILURE);
+	if (cmdline_parser(argc, argv, &cmdargs.args_info) != 0) exit(EXIT_FAILURE);
+	perform_sanity_checks_in_args(&cmdargs);
 	
-	if (args_info.getnumlevels_given) {
+	if (cmdargs.args_info.getnumlevels_given) {
 		int level = 0;
 		while (1) {
 			ptrn_t ptrn;
 			
 			//void genptrn_by_name(ptrn_t *ptrn, char *name, char *frsname, char *secname, int comm_size, int partcomm_size, int level) {
-			genptrn_by_name(&ptrn, args_info.ptrn_arg, args_info.ptrnfst_arg, args_info.ptrnsec_arg, args_info.commsize_arg, args_info.part_commsize_arg, level);
-			if (ptrn.size()==0) {break;}
+			genptrn_by_name(&ptrn, cmdargs.args_info.ptrn_arg, cmdargs.ptrnarg,
+							cmdargs.args_info.ptrnfst_arg, cmdargs.args_info.ptrnsec_arg,
+							cmdargs.args_info.commsize_arg, cmdargs.args_info.part_commsize_arg,
+							level);
+			if (ptrn.size() == 0) { break; }
 
 			level++; //proceed to next level
 		}
@@ -54,18 +60,18 @@ int main(int argc, char *argv[]) {
 	my_mpi_init(&argc, &argv, &mynode, &allnodes);
 
 	/* should only be done on rank 0 */
-	read_input_graph(args_info.input_file_arg);
+	read_input_graph(cmdargs.args_info.input_file_arg);
 	tag_edges(mygraph);
 
 	/* Read the node ordering if provided */
-	read_node_ordering(args_info.node_ordering_file_arg, &nodeorder_guidlist);
+	read_node_ordering(cmdargs.args_info.node_ordering_file_arg, &nodeorder_guidlist);
 
 	/* Read the complete namelist and store it in a temporary vector */
 	get_namelist_from_graph(&complete_namelist);
 
-	if (args_info.commsize_arg == 0) {
-		args_info.commsize_arg = complete_namelist.size() - complete_namelist.size() % 2;
-	} else if (args_info.commsize_arg > complete_namelist.size()) {
+	if (cmdargs.args_info.commsize_arg == 0) {
+		cmdargs.args_info.commsize_arg = complete_namelist.size() - complete_namelist.size() % 2;
+	} else if (cmdargs.args_info.commsize_arg > complete_namelist.size()) {
 		printf("You chose a very large 'commsize'.\n"
 			   "The maximum possible communication size is %d\n", complete_namelist.size());
 		exit(EXIT_FAILURE);
@@ -73,9 +79,9 @@ int main(int argc, char *argv[]) {
 
 	if(mynode == 0) { // print graph info
 
-		print_commandline_options(stdout, &args_info);
+		print_commandline_options(stdout, &cmdargs.args_info);
 
-		if (args_info.checkinputfile_given) {
+		if (cmdargs.args_info.checkinputfile_given) {
 			std::cout << "Number of hosts in the inputfile: " << complete_namelist.size() << "\n";
 			std::cout << "Number of nodes in the inputfile: " << agnnodes(mygraph) << "\n";
 
@@ -91,13 +97,13 @@ int main(int argc, char *argv[]) {
 		}
 
 		/* we have to use all hosts for the route quality assessment */
-		if (args_info.routequal_given) args_info.commsize_arg = complete_namelist.size();
+		if (cmdargs.args_info.routequal_given) cmdargs.args_info.commsize_arg = complete_namelist.size();
 	}
 
 	/* get a list of all endpoint-names that we will work with from the dot-file
 	 * This list, the namelist, may be a subset of the complete list. */
 	if (mynode == 0)
-		generate_namelist_by_name(args_info.subset_arg, &namelist, args_info.commsize_arg);
+		generate_namelist_by_name(cmdargs.args_info.subset_arg, &namelist, cmdargs.args_info.commsize_arg);
 
 	/* distribute namelist from root to all nodes */
 	bcast_namelist(&namelist, allnodes, mynode);
@@ -109,7 +115,7 @@ int main(int argc, char *argv[]) {
 		std::cout << "Number of edges in the inputfile: " << agnedges(mygraph) << "\n";
 	}
 	
-	if (args_info.routequal_given) {
+	if (cmdargs.args_info.routequal_given) {
 		cable_cong_map_t cable_cong;
 		int nconn = namelist.size()*namelist.size();
 		
@@ -256,7 +262,7 @@ int main(int argc, char *argv[]) {
 
 	while (1) { // perform simulations
 
-		int level = args_info.ptrn_level_arg;
+		int level = cmdargs.args_info.ptrn_level_arg;
 		if(level < 0) level = 0;
 		
 		/* Shuffle the list */
@@ -275,11 +281,11 @@ int main(int argc, char *argv[]) {
 				final_namelist.insert(final_namelist.begin() + i, nodeorder_namelist.at(i));
 		}
 
-		if ((args_info.printnamelist_given) && (mynode == 0)) { print_namelist(&final_namelist); }
+		if ((cmdargs.args_info.printnamelist_given) && (mynode == 0)) { print_namelist(&final_namelist); }
 
-		if(strcmp(args_info.metric_arg, "dep_max_delay") == 0) {
-			simulation_dep_max_delay(&args_info, &final_namelist, args_info.part_commsize_arg, mynode);
-			if (args_info.verbose_given && (mynode == 0)) {
+		if(strcmp(cmdargs.args_info.metric_arg, "dep_max_delay") == 0) {
+			simulation_dep_max_delay(&cmdargs, &final_namelist, cmdargs.args_info.part_commsize_arg, mynode);
+			if (cmdargs.args_info.verbose_given && (mynode == 0)) {
 				std::cout << "Process " << mynode << ": Simulation run number ";
 				std::cout << run_count << " finished.\n" << std::flush;
 			}
@@ -288,33 +294,38 @@ int main(int argc, char *argv[]) {
 			while (1) {
 				ptrn_t ptrn;
 				//void genptrn_by_name(ptrn_t *ptrn, char *name, char *frsname, char *secname, int comm_size, int partcomm_size, int level) {
-				genptrn_by_name(&ptrn, args_info.ptrn_arg, args_info.ptrnfst_arg, args_info.ptrnsec_arg, args_info.commsize_arg, args_info.part_commsize_arg, level);
+				genptrn_by_name(&ptrn, cmdargs.args_info.ptrn_arg, cmdargs.ptrnarg,
+								cmdargs.args_info.ptrnfst_arg, cmdargs.args_info.ptrnsec_arg,
+								cmdargs.args_info.commsize_arg, cmdargs.args_info.part_commsize_arg,
+								level);
 
-				if ((args_info.printptrn_given) && (mynode == 0)) {printptrn(&ptrn);}
-				if (ptrn.size()==0 || (args_info.ptrn_level_arg > -1 && level > args_info.ptrn_level_arg)) {break;}
+				if ((cmdargs.args_info.printptrn_given) && (mynode == 0)) { printptrn(&ptrn, &final_namelist); }
+				if (ptrn.size()==0 || (cmdargs.args_info.ptrn_level_arg > -1 && level > cmdargs.args_info.ptrn_level_arg)) {break;}
 
-				simulation_with_metric(args_info.metric_arg, &ptrn, &final_namelist, RUN);
+				simulation_with_metric(cmdargs.args_info.metric_arg, &ptrn, &final_namelist, RUN);
 
-				if (args_info.verbose_given && (mynode == 0)) {
+				if (cmdargs.args_info.verbose_given && (mynode == 0)) {
 					std::cout << "Process " << mynode << ": Simulation run number ";
 					std::cout << run_count << ", level " << level << " finished.\n" << std::flush;
 				}
 
 				level++; //proceed to next level
 			}
-			simulation_with_metric(args_info.metric_arg, NULL, &final_namelist, ACCOUNT);
+			simulation_with_metric(cmdargs.args_info.metric_arg, NULL, &final_namelist, ACCOUNT);
 		}
 		run_count++;
 		//TODO Add support for error treshold(?)
-		if (run_count > ceil((double) args_info.num_runs_arg / (double) allnodes)) {break;}
+		if (run_count > ceil((double) cmdargs.args_info.num_runs_arg / (double) allnodes)) {break;}
 	}
 
 	//	simulation_with_metric(args_info.metric_arg, NULL, &namelist, ACCOUNT);
-	exchange_results_by_metric(args_info.metric_arg, mynode, allnodes);
-	print_results(&args_info, mynode, allnodes);
+	exchange_results_by_metric(cmdargs.args_info.metric_arg, mynode, allnodes);
+	print_results(&cmdargs.args_info, mynode, allnodes);
 
 	MPI_Finalize();
 	agclose(mygraph);
+
+	free(cmdargs.ptrnarg);
 
 	return EXIT_SUCCESS;
 }

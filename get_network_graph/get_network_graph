@@ -176,14 +176,14 @@ with open(topo_file, mode='r', buffering=1) as topology_fd:
                     target_node = "H{}".format(int_to_hex_str(
                         hex_str_to_int(r.groups[3].replace('(', '').replace(')', '')),
                         16))
-                source_sw_port = switch + ":%.3i" % int(port)
+                source_sw_port = "{}:{:#03d}".format(switch, int(port))
 
                 if(graph.has_key(source_sw_port)):
-                    print("  \"{}\" -> \"{}\" [ comment=\"{}\" ];".format(switch, target_node, graph[source_sw_port]))
+                    print("  \"{0}\" -> \"{1}\" [ key=\"{0}:port-{2:#03d} to {1}\", comment=\"{3}\" ];".format(switch, target_node, int(port), graph[source_sw_port]))
                     # on request ... if we have a route to a host - print also
                     # the route from the host ...
                     if (r.search("^H", target_node)):
-                        print("  \"{}\" -> \"{}\" [ comment=\"*\" ];".format(target_node, switch))
+                        print("  \"{0}\" -> \"{1}\" [ key=\"{0} to {1}\", comment=\"*\" ];".format(target_node, switch))
                 else:
                     print("/* there is a problem with switch:port {} */".format(source_sw_port))
                     print("  \"{}\" -> \"{}\";".format(switch, target_node))

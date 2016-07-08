@@ -128,7 +128,7 @@ public:
 
 /* TODO: this function signature is ugly and could be built with the old
  * scheme and global variables and side effects */
-void simulation_dep_max_delay(gengetopt_args_info *args_info, namelist_t *namelist, int valid_until, int myrank) {
+void simulation_dep_max_delay(cmdargs_t *cmdargs, namelist_t *namelist, int valid_until, int myrank) {
 	// Vertex properties - name
 	typedef property < vertex_name_t, std::string, property < vertex_info_t, vertex_t, property < vertex_dist_t, int > > > vertex_p;
 	// Edge properties - routing table as comment
@@ -156,10 +156,13 @@ void simulation_dep_max_delay(gengetopt_args_info *args_info, namelist_t *nameli
 
 		//void genptrn_by_name(ptrn_t *ptrn, char *name, char *frsname, char *secname, int comm_size, int partcomm_size, int level) {
 
-		genptrn_by_name(&ptrn, args_info->ptrn_arg, args_info->ptrnfst_arg, args_info->ptrnsec_arg, args_info->commsize_arg, args_info->part_commsize_arg, level++);
+		genptrn_by_name(&ptrn, cmdargs->args_info.ptrn_arg, cmdargs->ptrnarg,
+						cmdargs->args_info.ptrnfst_arg, cmdargs->args_info.ptrnsec_arg,
+						cmdargs->args_info.commsize_arg, cmdargs->args_info.part_commsize_arg,
+						level++);
 		if (ptrn.size()==0) break;
 		//printf("level: %i\n", level-1);
-		if ((args_info->printptrn_given) && (myrank== 0)) {printptrn(&ptrn);}
+		if ((cmdargs->args_info.printptrn_given) && (myrank== 0)) { printptrn(&ptrn, namelist); }
 
 		std::map<int,graph_traits <graph_t>::vertex_descriptor> thisleveldests; // destinations from this level
 		std::map<int,graph_traits <graph_t>::vertex_descriptor> thislevelsources; // sources from this level
@@ -244,8 +247,10 @@ void simulation_dep_max_delay(gengetopt_args_info *args_info, namelist_t *nameli
 	// TODO: there are cycles if there is cyclic communication in a level :-(
 	{
 		ptrn_t ptrn;
-		//genptrn_by_name(&ptrn, args_info->ptrn_arg, args_info->commsize_arg, 0);
-		genptrn_by_name(&ptrn, args_info->ptrn_arg, args_info->ptrnfst_arg, args_info->ptrnsec_arg, args_info->commsize_arg, args_info->part_commsize_arg, 0);
+		genptrn_by_name(&ptrn, cmdargs->args_info.ptrn_arg, cmdargs->ptrnarg,
+						cmdargs->args_info.ptrnfst_arg, cmdargs->args_info.ptrnsec_arg,
+						cmdargs->args_info.commsize_arg, cmdargs->args_info.part_commsize_arg,
+						0);
 		int max=0;
 		for (ptrn_t::iterator iter_ptrn = ptrn.begin(); iter_ptrn != ptrn.end(); iter_ptrn++) {
 			if((iter_ptrn->first >= valid_until) || (iter_ptrn->second >= valid_until)) continue;

@@ -356,9 +356,8 @@ double get_acc_bandwidth(bucket_t *bucket) {
 	double sum=0;
 	double res=0;
 
+	assert(bucket->at(0) == 0);
 	for (count=1; count<bucket->size(); count++) {
-
-		assert(bucket->at(0) == 0);
 		if (bucket->at(count) > 0) {
 			sum += bucket->at(count);
 			res += (((double) bucket->at(count)) / count);
