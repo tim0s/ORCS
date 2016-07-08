@@ -153,8 +153,8 @@ static void process_ptrnargs(IN char *ptrn,
 		 strcmp(ptrn, "receivers") == 0)) {
 		/* For neighbor or receivers pattern, the
 		 * pattern argument must be an integer */
-		int *ptrnarg_i = (int *)malloc(sizeof(int));
-		if (!ptrnarg_i)
+		int *ptrnarg_i = (int *)malloc(sizeof(*ptrnarg_i));
+		if (ptrnarg_i == NULL)
 			goto exit;
 
 		*ptrnarg_i = strtoi(ptrnarg, &next_num, 10);
@@ -194,7 +194,7 @@ void perform_sanity_checks_in_args(IN OUT cmdargs_t *cmdargs) {
 	 * pattern argument that hasn't been provided, warn and exit. */
 	if ((strcmp(ptrn, "neighbor") == 0 ||
 		 strcmp(ptrn, "receivers") == 0) &&
-			!ptrnarg)
+			ptrnarg == NULL)
 		print_ptrnarg_help(ptrn, NULL, true);
 
 	/* Ensure that if a pattern argument is provided, it has been
