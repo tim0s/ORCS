@@ -157,7 +157,6 @@ void simulation_dep_max_delay(cmdargs_t *cmdargs, namelist_t *namelist, int vali
 		//void genptrn_by_name(ptrn_t *ptrn, char *name, char *frsname, char *secname, int comm_size, int partcomm_size, int level) {
 
 		genptrn_by_name(&ptrn, cmdargs->args_info.ptrn_arg, cmdargs->ptrnarg,
-						cmdargs->args_info.ptrnfst_arg, cmdargs->args_info.ptrnsec_arg,
 						cmdargs->args_info.commsize_arg, cmdargs->args_info.part_commsize_arg,
 						level++);
 		if (ptrn.size()==0) break;
@@ -248,7 +247,6 @@ void simulation_dep_max_delay(cmdargs_t *cmdargs, namelist_t *namelist, int vali
 	{
 		ptrn_t ptrn;
 		genptrn_by_name(&ptrn, cmdargs->args_info.ptrn_arg, cmdargs->ptrnarg,
-						cmdargs->args_info.ptrnfst_arg, cmdargs->args_info.ptrnsec_arg,
 						cmdargs->args_info.commsize_arg, cmdargs->args_info.part_commsize_arg,
 						0);
 		int max=0;
@@ -1079,12 +1077,17 @@ void print_commandline_options(FILE *fd, gengetopt_args_info *args_info) {
 	fprintf(fd, "Output File: %s\n", args_info->output_file_arg);
 	fprintf(fd, "Commsize: %d\n", args_info->commsize_arg);
 	fprintf(fd, "Pattern: %s\n", args_info->ptrn_arg);
+	if (strcmp(args_info->ptrn_arg, "ptrnvsptrn") == 0) {
+		// TODO: Now I need to change most of the the function to use the "cmdargs"
+		//       instead of the args_info, so that I can get the info from the
+		//       ptrnarg if needed.
+		//fprintf(fd, "First Pattern: %s\n", args_info->ptrn_arg);
+		//fprintf(fd, "Second Pattern: %s\n", args_info->ptrn_arg);
+	}
 	fprintf(fd, "Level: %d\n", args_info->ptrn_level_arg);
 	fprintf(fd, "Runs: %d\n", args_info->num_runs_arg);
 	fprintf(fd, "Subset: %s\n", args_info->subset_arg);
 	fprintf(fd, "Metric: %s\n", args_info->metric_arg);
-	fprintf(fd, "Fstptrn: %s\n", args_info->ptrnfst_arg);
-	fprintf(fd, "Secptrn: %s\n", args_info->ptrnsec_arg);
 	fprintf(fd, "Part_commsize: %i\n\n", args_info->part_commsize_arg);
 }
 

@@ -28,6 +28,6 @@ void genptrn_nreceivers(int comm_size, int level, int num_receivers, ptrn_t *ptr
 
 void printptrn(ptrn_t *ptrn, namelist_t *namelist);
 
-void genptrn_by_name(ptrn_t *ptrn, char *ptrnname, void *ptrnarg, char *frsname, char *secname, int comm_size, int partcomm_size, int level);
+void genptrn_by_name(ptrn_t *ptrn, char *ptrnname, void *ptrnarg, int comm_size, int partcomm_size, int level);
 
 #endif

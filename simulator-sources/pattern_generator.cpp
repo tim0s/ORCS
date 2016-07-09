@@ -409,7 +409,7 @@ void printptrn(ptrn_t *ptrn, namelist_t *namelist) {
 	printf("=================\n");
 }
 
-void genptrn_by_name(ptrn_t *ptrn, char *ptrnname, void *ptrnarg, char *frsname, char *secname, int comm_size, int partcomm_size, int level) {
+void genptrn_by_name(ptrn_t *ptrn, char *ptrnname, void *ptrnarg, int comm_size, int partcomm_size, int level) {
 	
 	//printf("Name: %s\n Size: %i\n Level: %i\n", ptrnname, comm_size, level);
 	
@@ -429,12 +429,14 @@ void genptrn_by_name(ptrn_t *ptrn, char *ptrnname, void *ptrnarg, char *frsname,
 	else if (strcmp(ptrnname, "receivers") == 0) { genptrn_nreceivers(comm_size, level, *((int*)ptrnarg), ptrn); }
 	else if (strcmp(ptrnname, "ptrnvsptrn") == 0) {
 		static int level_ptrn2 = 0;
+		ptrnvsptrn_t ptrnvsptrn = *((ptrnvsptrn_t *)ptrnarg);
 		ptrn_t ptrn1, ptrn2;
-		genptrn_by_name(&ptrn1, frsname, ptrnarg, (char *)"", (char *)"", partcomm_size, 0, level);
-		genptrn_by_name(&ptrn2, secname, ptrnarg, (char *)"", (char *)"", comm_size - partcomm_size, 0, level_ptrn2);
+		//printf("%s, %s\n", ptrnvsptrn.ptrn1, ptrnvsptrn.ptrn2);
+		genptrn_by_name(&ptrn1, ptrnvsptrn.ptrn1, ptrnvsptrn.ptrnarg1, partcomm_size, 0, level);
+		genptrn_by_name(&ptrn2, ptrnvsptrn.ptrn2, ptrnvsptrn.ptrnarg2, comm_size - partcomm_size, 0, level_ptrn2);
 		if ((ptrn2.size()==0) && (ptrn1.size()!=0)) {
 			level_ptrn2=0;
-			genptrn_by_name(&ptrn2, secname, ptrnarg, (char *)"", (char *)"", comm_size - partcomm_size, 0, level_ptrn2);
+			genptrn_by_name(&ptrn2, ptrnvsptrn.ptrnargname2, ptrnvsptrn.ptrnarg2, comm_size - partcomm_size, 0, level_ptrn2);
 		}
 		level_ptrn2++;
 		merge_two_patterns_into_one(&ptrn1, &ptrn2, partcomm_size, ptrn);

@@ -12,7 +12,7 @@
 #define RUN 100
 #define ACCOUNT 101
 #define PARSE_GUID_BUFLEN  256
-
+#define MAX_ARG_SIZE 80
 /* IN and OUT are used to indicate if a function's
  * parameter is used as input or output */
 #define IN
@@ -24,6 +24,15 @@ typedef struct {
 	gengetopt_args_info args_info;
 	void *ptrnarg;
 } cmdargs_t;
+
+typedef struct {
+	char ptrn1[MAX_ARG_SIZE];
+	char ptrnargname1[MAX_ARG_SIZE];
+	void *ptrnarg1;
+	char ptrn2[MAX_ARG_SIZE];
+	char ptrnargname2[MAX_ARG_SIZE];
+	void *ptrnarg2;
+} ptrnvsptrn_t;
 
 typedef std::pair<int, int> pair_t;
 typedef std::vector<pair_t> ptrn_t;

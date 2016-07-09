@@ -25,7 +25,7 @@
 Agraph_t *mygraph;
 
 extern void perform_sanity_checks_in_args(IN OUT cmdargs_t *cmdargs);
-extern void cleanup_args(IN cmdargs_t *cmdargs);
+extern void cleanup_args(IN char *ptrn, void *ptrnarg);
 
 int main(int argc, char *argv[]) {
 	
@@ -47,7 +47,6 @@ int main(int argc, char *argv[]) {
 			
 			//void genptrn_by_name(ptrn_t *ptrn, char *name, char *frsname, char *secname, int comm_size, int partcomm_size, int level) {
 			genptrn_by_name(&ptrn, cmdargs.args_info.ptrn_arg, cmdargs.ptrnarg,
-							cmdargs.args_info.ptrnfst_arg, cmdargs.args_info.ptrnsec_arg,
 							cmdargs.args_info.commsize_arg, cmdargs.args_info.part_commsize_arg,
 							level);
 			if (ptrn.size() == 0) { break; }
@@ -115,7 +114,7 @@ int main(int argc, char *argv[]) {
 		std::cout << "Number of nodes in the inputfile: " << agnnodes(mygraph) << "\n";
 		std::cout << "Number of edges in the inputfile: " << agnedges(mygraph) << "\n";
 	}
-	
+
 	if (cmdargs.args_info.routequal_given) {
 		cable_cong_map_t cable_cong;
 		int nconn = namelist.size()*namelist.size();
@@ -265,7 +264,7 @@ int main(int argc, char *argv[]) {
 
 		int level = cmdargs.args_info.ptrn_level_arg;
 		if(level < 0) level = 0;
-		
+
 		/* Shuffle the list */
 		shuffle_namelist(&namelist);
 
@@ -294,9 +293,8 @@ int main(int argc, char *argv[]) {
 			// TODO: uebelst beschissen but a fast solution to the problem.
 			while (1) {
 				ptrn_t ptrn;
-				//void genptrn_by_name(ptrn_t *ptrn, char *name, char *frsname, char *secname, int comm_size, int partcomm_size, int level) {
+
 				genptrn_by_name(&ptrn, cmdargs.args_info.ptrn_arg, cmdargs.ptrnarg,
-								cmdargs.args_info.ptrnfst_arg, cmdargs.args_info.ptrnsec_arg,
 								cmdargs.args_info.commsize_arg, cmdargs.args_info.part_commsize_arg,
 								level);
 
@@ -326,7 +324,7 @@ int main(int argc, char *argv[]) {
 	MPI_Finalize();
 	agclose(mygraph);
 
-	cleanup_args(&cmdargs);
+	cleanup_args(cmdargs.args_info.ptrn_arg, cmdargs.ptrnarg);
 
 	return EXIT_SUCCESS;
 }
