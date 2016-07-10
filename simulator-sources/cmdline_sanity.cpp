@@ -96,8 +96,8 @@
  * the function checks if the provided number is within the INT limits.
  */
 static int strtoi(IN const char *s,
-				  IN OUT char **endptr,
-				  IN int base) {
+                  IN OUT char **endptr,
+                  IN int base) {
 	long retnum;
 
 	retnum = strtoul(s, endptr, base);
@@ -115,8 +115,8 @@ static int strtoi(IN const char *s,
  * the last element must be set to 0.
  */
 int check_possible_values(IN const char *val,
-						  IN const char *values[],
-						  IN const char *values_to_exclude[]) {
+                          IN const char *values[],
+                          IN const char *values_to_exclude[]) {
 	int i, j;
 	size_t len;
 
@@ -175,32 +175,32 @@ int check_if_ptrn_available_for_ptrnvsptrn(const char *ptrn) {
  * file to understand how to use this function.
  */
 static void print_ptrnarg_help(IN char *ptrn,
-							   IN char *ptrnarg,
-							   IN bool error = false) {
+                               IN char *ptrnarg,
+                               IN bool error = false) {
 
 	if ((strcmp(ptrn, "neighbor") == 0 ||
-		 strcmp(ptrn, "receivers") == 0))
+	     strcmp(ptrn, "receivers") == 0))
 		/* Prints an INT Required usage/error message */
 		fprintf(stderr, "\n%s: Pattern '%s' requires an integer ptrnarg that is greater than 0. %s%s%s%s\n",
-			   error ? "ERROR" : "Usage", ptrn,
-			   ptrnarg ? "'" : "",
-			   ptrnarg ? ptrnarg : "",
-			   ptrnarg ? "' " : "",
-			   ptrnarg ? "provided." : "");
+		        error ? "ERROR" : "Usage", ptrn,
+		        ptrnarg ? "'" : "",
+		        ptrnarg ? ptrnarg : "",
+		        ptrnarg ? "' " : "",
+		        ptrnarg ? "provided." : "");
 	else if (strcmp(ptrn, "ptrnvsptrn") == 0)
 		fprintf(stderr, "\n%s: Pattern '%s' requires a string ptrnarg in the following format:\n"
-			   "         pattern1:arg2,pattern2:arg2\n"
-			   "         \n"
-			   "       The args (arg1 and/or arg2) are optional, and should only be provided\n"
-			   "       if the used patterns need an argument.\n"
-			   "       All of the available patterns except 'ptrnvsptrn' can be used for either\n"
-			   "       pattern1 or pattern2.\n"
-			   "%s%s%s%s\n",
-			   error ? "ERROR" : "Usage", ptrn,
-			   ptrnarg ? "\nPattern argument '" : "",
-			   ptrnarg ? ptrnarg : "",
-			   ptrnarg ? "' " : "",
-			   ptrnarg ? "provided." : "");
+		        "         pattern1:arg2,pattern2:arg2\n"
+		        "         \n"
+		        "       The args (arg1 and/or arg2) are optional, and should only be provided\n"
+		        "       if the used patterns need an argument.\n"
+		        "       All of the available patterns except 'ptrnvsptrn' can be used for either\n"
+		        "       pattern1 or pattern2.\n"
+		        "%s%s%s%s\n",
+		        error ? "ERROR" : "Usage", ptrn,
+		        ptrnarg ? "\nPattern argument '" : "",
+		        ptrnarg ? ptrnarg : "",
+		        ptrnarg ? "' " : "",
+		        ptrnarg ? "provided." : "");
 
 	if (error)
 		exit(EXIT_FAILURE);
@@ -213,8 +213,8 @@ static void print_ptrnarg_help(IN char *ptrn,
  * allocates memory to store the data in the necessary data structs
  */
 static void process_ptrnargs(IN char *ptrn,
-							 IN char *ptrnarg,
-							 IN OUT cmdargs_t *cmdargs) {
+                             IN char *ptrnarg,
+                             IN OUT cmdargs_t *cmdargs) {
 
 	/* If the pattern argument is "help", just print the help
 	 * message corresponding to that ptrn and exit. */
@@ -225,7 +225,7 @@ static void process_ptrnargs(IN char *ptrn,
 	 * we are currently processing, and parse the pattern args
 	 * as necessary */
 	if ((strcmp(ptrn, "neighbor") == 0 ||
-		 strcmp(ptrn, "receivers") == 0)) {
+	     strcmp(ptrn, "receivers") == 0)) {
 
 		/**
 		 * For neighbor or receivers pattern, the
@@ -333,8 +333,8 @@ static void process_ptrnargs(IN char *ptrn,
 				 * Copy the complete matched string in the complete_match array.
 				 * Perform some bound checks. */
 				strncpy(complete_match, cursor,
-						(end_pos - start_pos) < max_match_size ?
-							end_pos - start_pos : max_match_size);
+				        (end_pos - start_pos) < max_match_size ?
+				            end_pos - start_pos : max_match_size);
 
 				/* Check if the complete matched string is the same as the ptrnarg. */
 				if (strncmp(ptrnarg, complete_match, strlen(complete_match)) != 0) {
@@ -371,8 +371,8 @@ static void process_ptrnargs(IN char *ptrn,
 				 * Perform some bound checks. */
 				if (cur_match != NULL)
 					strncpy(cur_match, cursor + start_pos,
-							(end_pos - start_pos) < MAX_ARG_SIZE - start_pos ?
-								end_pos - start_pos : MAX_ARG_SIZE - start_pos);
+					        (end_pos - start_pos) < MAX_ARG_SIZE - start_pos ?
+					            end_pos - start_pos : MAX_ARG_SIZE - start_pos);
 			}
 
 			//printf ("Matched in group %d: '%.*s' (bytes %d:%d)\n", g,
@@ -384,7 +384,7 @@ static void process_ptrnargs(IN char *ptrn,
 
 		/* Validate that the user has provided an known pattern */
 		if ((check_if_ptrn_available_for_ptrnvsptrn(matches->ptrn1) == -1 ||
-			 check_if_ptrn_available_for_ptrnvsptrn(matches->ptrn2) == -1))
+		     check_if_ptrn_available_for_ptrnvsptrn(matches->ptrn2) == -1))
 			print_ptrnarg_help(ptrn, ptrnarg, true);
 
 		/* Use some temporary cmdargs variables, and call the function process_ptrnargs
@@ -423,9 +423,9 @@ void perform_sanity_checks_in_args(IN OUT cmdargs_t *cmdargs) {
 	/* First check the pattern name, and if it needs a mandatory
 	 * pattern argument that hasn't been provided, warn and exit. */
 	if ((strcmp(ptrn, "neighbor") == 0 ||
-		 strcmp(ptrn, "receivers") == 0 ||
-		 strcmp(ptrn, "ptrnvsptrn") == 0) &&
-			ptrnarg == NULL)
+	     strcmp(ptrn, "receivers") == 0 ||
+	     strcmp(ptrn, "ptrnvsptrn") == 0) &&
+	        ptrnarg == NULL)
 		print_ptrnarg_help(ptrn, NULL, true);
 
 	/* Ensure that if a pattern argument is provided, it has been
@@ -441,7 +441,7 @@ void perform_sanity_checks_in_args(IN OUT cmdargs_t *cmdargs) {
 void cleanup_args(IN char *ptrn, IN void *ptrnarg) {
 
 	if ((strcmp(ptrn, "neighbor") == 0 ||
-		 strcmp(ptrn, "receivers") == 0))
+	     strcmp(ptrn, "receivers") == 0))
 		free(ptrnarg);
 	else if (strcmp(ptrn, "ptrnvsptrn") == 0) {
 		ptrnvsptrn_t *ptrnvsptrn = (ptrnvsptrn_t *)ptrnarg;

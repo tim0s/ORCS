@@ -381,11 +381,11 @@ void genptrn_recdbl(int comm_size, int level, ptrn_t *ptrn) {
 }
 
 void genptrn_nreceivers(int comm_size, int level, int num_receivers, ptrn_t *ptrn) {
-//	if (level != 0) return;
+	//	if (level != 0) return;
 	printf("RUNNING IN RECEIVERS: %d\n", num_receivers);
-//	for (int counter = 0; counter < comm_size-1; counter++) {
-//		ptrn->push_back(std::pair<int, int>(0, 1));
-//	}
+	//	for (int counter = 0; counter < comm_size-1; counter++) {
+	//		ptrn->push_back(std::pair<int, int>(0, 1));
+	//	}
 	/* NOT YET IMPLEMENTED */
 	exit(EXIT_FAILURE);
 }
@@ -402,9 +402,9 @@ void printptrn(ptrn_t *ptrn, namelist_t *namelist) {
 	printf("\nUsed Pattern:\n=================\n");
 	for(iter = ptrn->begin(); iter != ptrn->end(); iter++) {
 		printf("% 5i -> %-5i   |   %s -> %s\n",
-			   iter->first, iter->second,
-			   namelist->at(iter->first).data(),
-			   namelist->at(iter->second).data());
+		       iter->first, iter->second,
+		       namelist->at(iter->first).data(),
+		       namelist->at(iter->second).data());
 	}
 	printf("=================\n");
 }

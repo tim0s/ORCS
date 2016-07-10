@@ -46,15 +46,15 @@ typedef std::vector<edgeid_t> uroute_t;
 typedef std::vector<edge_t> named_ptrn_t;
 
 class used_edge_t {
-	public:
-		edge_t edge;
-		int usage;
-		std::vector<edge_t> peers; /* all the terminal-nodes that use this edge */
+public:
+	edge_t edge;
+	int usage;
+	std::vector<edge_t> peers; /* all the terminal-nodes that use this edge */
 
-		bool operator<(used_edge_t b) const {
-			if(usage < b.usage) return true;
-			else return false;
-        }
+	bool operator<(used_edge_t b) const {
+		if(usage < b.usage) return true;
+		else return false;
+	}
 };
 
 typedef std::vector<used_edge_t> used_edges_t;
@@ -113,7 +113,7 @@ void write_graph_with_congestions();
 /* globals */
 #ifndef MYGLOBALS
 #define MYGLOBALS
-	extern Agraph_t *mygraph;
+extern Agraph_t *mygraph;
 #endif
 
 #endif

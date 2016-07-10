@@ -456,7 +456,7 @@ void print_bucket(FILE *fd, bucket_t *bucket) {
 	for (count=0; count<bucket->size(); count++) {
 		if (bucket->at(count) > 0) {
 			fprintf(fd, "weight %i: %i of the %i connections (%.2lf%%)\n",
-					count, bucket->at(count), sum,  bucket->at(count) / (double) sum * 100);
+			        count, bucket->at(count), sum,  bucket->at(count) / (double) sum * 100);
 		}
 	}
 
