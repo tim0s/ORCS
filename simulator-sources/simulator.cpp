@@ -1081,9 +1081,9 @@ void print_commandline_options(FILE *fd, cmdargs_t *cmdargs) {
 		ptrnvsptrn_t ptrnvsptrn = *((ptrnvsptrn_t *)cmdargs->ptrnarg);
 
 		fprintf(fd, "    First Pattern: %s%s%s\n", ptrnvsptrn.ptrn1,
-				strlen(ptrnvsptrn.ptrnargname1) ? "," : "", ptrnvsptrn.ptrnargname1);
+				strlen(ptrnvsptrn.ptrnargstr1) ? "," : "", ptrnvsptrn.ptrnargstr1);
 		fprintf(fd, "   Second Pattern: %s%s%s\n", ptrnvsptrn.ptrn2,
-				strlen(ptrnvsptrn.ptrnargname2) ? "," : "", ptrnvsptrn.ptrnargname2);
+				strlen(ptrnvsptrn.ptrnargstr2) ? "," : "", ptrnvsptrn.ptrnargstr2);
 	}
 	fprintf(fd, "Level: %d\n", cmdargs->args_info.ptrn_level_arg);
 	fprintf(fd, "Runs: %d\n", cmdargs->args_info.num_runs_arg);

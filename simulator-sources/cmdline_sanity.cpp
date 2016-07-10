@@ -358,11 +358,11 @@ static void process_ptrnargs(IN char *ptrn,
 					case 1:
 						cur_match = matches->ptrn1; break;
 					case 3:
-						cur_match = matches->ptrnargname1; break;
+						cur_match = matches->ptrnargstr1; break;
 					case 4:
 						cur_match = matches->ptrn2; break;
 					case 6:
-						cur_match = matches->ptrnargname2; break;
+						cur_match = matches->ptrnargstr2; break;
 					default:
 						cur_match = NULL;
 				}
@@ -393,8 +393,8 @@ static void process_ptrnargs(IN char *ptrn,
 		cmdargs_ptrn1.args_info = cmdargs->args_info;
 		cmdargs_ptrn2.args_info = cmdargs->args_info;
 
-		process_ptrnargs(matches->ptrn1, matches->ptrnargname1, &cmdargs_ptrn1);
-		process_ptrnargs(matches->ptrn2, matches->ptrnargname2, &cmdargs_ptrn2);
+		process_ptrnargs(matches->ptrn1, matches->ptrnargstr1, &cmdargs_ptrn1);
+		process_ptrnargs(matches->ptrn2, matches->ptrnargstr2, &cmdargs_ptrn2);
 		matches->ptrnarg1 = cmdargs_ptrn1.ptrnarg;
 		matches->ptrnarg2 = cmdargs_ptrn2.ptrnarg;
 
@@ -436,6 +436,7 @@ void perform_sanity_checks_in_args(IN OUT cmdargs_t *cmdargs) {
 /**
  * The cleanup_args function takes care of cleaning the memory that has
  * been potentially allocated in heap by the process_ptrnargs function.
+ * It is called, at least, at the last line in driver.cpp file.
  */
 void cleanup_args(IN char *ptrn, IN void *ptrnarg) {
 
@@ -443,9 +444,9 @@ void cleanup_args(IN char *ptrn, IN void *ptrnarg) {
 		 strcmp(ptrn, "receivers") == 0))
 		free(ptrnarg);
 	else if (strcmp(ptrn, "ptrnvsptrn") == 0) {
-		ptrnvsptrn_t *temp = (ptrnvsptrn_t *)ptrnarg;
-		cleanup_args(temp->ptrn1, temp->ptrnarg1);
-		cleanup_args(temp->ptrn2, temp->ptrnarg2);
-		free(temp);
+		ptrnvsptrn_t *ptrnvsptrn = (ptrnvsptrn_t *)ptrnarg;
+		cleanup_args(ptrnvsptrn->ptrn1, ptrnvsptrn->ptrnarg1);
+		cleanup_args(ptrnvsptrn->ptrn2, ptrnvsptrn->ptrnarg2);
+		free(ptrnvsptrn);
 	}
 }
