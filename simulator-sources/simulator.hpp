@@ -73,8 +73,8 @@ void simulation_hist_effective_bandwidth(ptrn_t *ptrn, namelist_t *namelist, int
 void simulation_sum_max_cong(ptrn_t *ptrn, namelist_t *namelist, int state);
 void simulation_dep_max_delay(cmdargs_t *cmdargs, namelist_t *namelist, int valid_until, int myrank);
 void simulation_get_cable_cong(ptrn_t *ptrn, namelist_t *namelist, int state);
-void print_commandline_options(FILE *fd, gengetopt_args_info *args_info);
-void print_results(gengetopt_args_info *args_info, int mynode, int allnodes);
+void print_commandline_options(FILE *fd, cmdargs_t *cmdargs);
+void print_results(cmdargs_t *cmdargs, int mynode, int allnodes);
 void print_namelist(namelist_t *namelist);
 void generate_namelist_by_name(char *method, namelist_t *namelist, int comm_size);
 void generate_random_namelist(namelist_t *namelist, int comm_size);

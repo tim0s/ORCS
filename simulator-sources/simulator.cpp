@@ -1072,35 +1072,36 @@ void bcast_namelist(namelist_t *namelist, int comm_size, int rank) {
 	free(buffer);
 }
 
-void print_commandline_options(FILE *fd, gengetopt_args_info *args_info) {
-	fprintf(fd, "Input File: %s\n", args_info->input_file_arg);
-	fprintf(fd, "Output File: %s\n", args_info->output_file_arg);
-	fprintf(fd, "Commsize: %d\n", args_info->commsize_arg);
-	fprintf(fd, "Pattern: %s\n", args_info->ptrn_arg);
-	if (strcmp(args_info->ptrn_arg, "ptrnvsptrn") == 0) {
-		// TODO: Now I need to change most of the the function to use the "cmdargs"
-		//       instead of the args_info, so that I can get the info from the
-		//       ptrnarg if needed.
-		//fprintf(fd, "First Pattern: %s\n", args_info->ptrn_arg);
-		//fprintf(fd, "Second Pattern: %s\n", args_info->ptrn_arg);
+void print_commandline_options(FILE *fd, cmdargs_t *cmdargs) {
+	fprintf(fd, "Input File: %s\n", cmdargs->args_info.input_file_arg);
+	fprintf(fd, "Output File: %s\n", cmdargs->args_info.output_file_arg);
+	fprintf(fd, "Commsize: %d\n", cmdargs->args_info.commsize_arg);
+	fprintf(fd, "Pattern: %s\n", cmdargs->args_info.ptrn_arg);
+	if (strcmp(cmdargs->args_info.ptrn_arg, "ptrnvsptrn") == 0) {
+		ptrnvsptrn_t ptrnvsptrn = *((ptrnvsptrn_t *)cmdargs->ptrnarg);
+
+		fprintf(fd, "    First Pattern: %s%s%s\n", ptrnvsptrn.ptrn1,
+				strlen(ptrnvsptrn.ptrnargname1) ? "," : "", ptrnvsptrn.ptrnargname1);
+		fprintf(fd, "   Second Pattern: %s%s%s\n", ptrnvsptrn.ptrn2,
+				strlen(ptrnvsptrn.ptrnargname2) ? "," : "", ptrnvsptrn.ptrnargname2);
 	}
-	fprintf(fd, "Level: %d\n", args_info->ptrn_level_arg);
-	fprintf(fd, "Runs: %d\n", args_info->num_runs_arg);
-	fprintf(fd, "Subset: %s\n", args_info->subset_arg);
-	fprintf(fd, "Metric: %s\n", args_info->metric_arg);
-	fprintf(fd, "Part_commsize: %i\n\n", args_info->part_commsize_arg);
+	fprintf(fd, "Level: %d\n", cmdargs->args_info.ptrn_level_arg);
+	fprintf(fd, "Runs: %d\n", cmdargs->args_info.num_runs_arg);
+	fprintf(fd, "Subset: %s\n", cmdargs->args_info.subset_arg);
+	fprintf(fd, "Metric: %s\n", cmdargs->args_info.metric_arg);
+	fprintf(fd, "Part_commsize: %i\n\n", cmdargs->args_info.part_commsize_arg);
 }
 
-void print_results(gengetopt_args_info *args_info, int mynode, int allnodes) {
+void print_results(cmdargs_t *cmdargs, int mynode, int allnodes) {
 
 	if (mynode == 0) {
-		char *filename = args_info->output_file_arg;
+		char *filename = cmdargs->args_info.output_file_arg;
 		if (strcmp(filename, "-") == 0) {
-			if (strcmp(args_info->metric_arg, "dep_max_delay") == 0) {print_statistics_max_delay(stdout);}
-			if (strcmp(args_info->metric_arg, "sum_max_cong") == 0) {print_statistics_max_congestions(stdout);}
-			if (strcmp(args_info->metric_arg, "hist_acc_band") == 0) {print_histogram(stdout);}
-			if (strcmp(args_info->metric_arg, "hist_max_cong") == 0) {printbigbucket(stdout);}
-			if (strcmp(args_info->metric_arg, "get_cable_cong") == 0) {write_graph_with_congestions();}
+			if (strcmp(cmdargs->args_info.metric_arg, "dep_max_delay") == 0) {print_statistics_max_delay(stdout);}
+			if (strcmp(cmdargs->args_info.metric_arg, "sum_max_cong") == 0) {print_statistics_max_congestions(stdout);}
+			if (strcmp(cmdargs->args_info.metric_arg, "hist_acc_band") == 0) {print_histogram(stdout);}
+			if (strcmp(cmdargs->args_info.metric_arg, "hist_max_cong") == 0) {printbigbucket(stdout);}
+			if (strcmp(cmdargs->args_info.metric_arg, "get_cable_cong") == 0) {write_graph_with_congestions();}
 		}
 		else {
 			FILE *fd;
@@ -1111,12 +1112,12 @@ void print_results(gengetopt_args_info *args_info, int mynode, int allnodes) {
 				exit(EXIT_FAILURE);
 			}
 			else {
-				print_commandline_options(fd, args_info);
-				if (strcmp(args_info->metric_arg, "hist_acc_band") == 0) {print_histogram(fd);}
-				if (strcmp(args_info->metric_arg, "sum_max_cong") == 0) {print_statistics_max_congestions(fd);}
-				if (strcmp(args_info->metric_arg, "dep_max_delay") == 0) {print_statistics_max_delay(fd);}
-				if (strcmp(args_info->metric_arg, "hist_max_cong") == 0) {printbigbucket(fd);}
-				if (strcmp(args_info->metric_arg, "get_cable_cong") == 0) {print_cable_cong(fd);}
+				print_commandline_options(fd, cmdargs);
+				if (strcmp(cmdargs->args_info.metric_arg, "hist_acc_band") == 0) {print_histogram(fd);}
+				if (strcmp(cmdargs->args_info.metric_arg, "sum_max_cong") == 0) {print_statistics_max_congestions(fd);}
+				if (strcmp(cmdargs->args_info.metric_arg, "dep_max_delay") == 0) {print_statistics_max_delay(fd);}
+				if (strcmp(cmdargs->args_info.metric_arg, "hist_max_cong") == 0) {printbigbucket(fd);}
+				if (strcmp(cmdargs->args_info.metric_arg, "get_cable_cong") == 0) {print_cable_cong(fd);}
 				fclose(fd);
 			}
 		}

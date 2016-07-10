@@ -79,7 +79,7 @@ int main(int argc, char *argv[]) {
 
 	if(mynode == 0) { // print graph info
 
-		print_commandline_options(stdout, &cmdargs.args_info);
+		print_commandline_options(stdout, &cmdargs);
 
 		if (cmdargs.args_info.checkinputfile_given) {
 			std::cout << "Number of hosts in the inputfile: " << complete_namelist.size() << "\n";
@@ -319,7 +319,7 @@ int main(int argc, char *argv[]) {
 
 	//	simulation_with_metric(args_info.metric_arg, NULL, &namelist, ACCOUNT);
 	exchange_results_by_metric(cmdargs.args_info.metric_arg, mynode, allnodes);
-	print_results(&cmdargs.args_info, mynode, allnodes);
+	print_results(&cmdargs, mynode, allnodes);
 
 	MPI_Finalize();
 	agclose(mygraph);
