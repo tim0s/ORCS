@@ -381,13 +381,56 @@ void genptrn_recdbl(int comm_size, int level, ptrn_t *ptrn) {
 }
 
 void genptrn_nreceivers(int comm_size, int level, int num_receivers, ptrn_t *ptrn) {
-	//	if (level != 0) return;
-	printf("RUNNING IN RECEIVERS: %d\n", num_receivers);
-	//	for (int counter = 0; counter < comm_size-1; counter++) {
-	//		ptrn->push_back(std::pair<int, int>(0, 1));
-	//	}
-	/* NOT YET IMPLEMENTED */
-	exit(EXIT_FAILURE);
+	if (level != 0) return;
+
+	fprintf(stderr, "RECEIVERS PTRN: comm_size: %d, num_receivers: %d\n", comm_size, num_receivers);
+
+	/* We cannot have more than comm_size / 2 receivers, because then we will
+	 * not have enough senders to send traffic to all of the receivers. One
+	 * sender sends traffic to only one receiver at a time. */
+	if (num_receivers > floor((double)comm_size / 2)) {
+		num_receivers = floor((double)comm_size / 2);
+		printf("#*** WARN: cannot have more than commsize/2 receivers.\n"
+		       "     Correcting number of receivers to %d (commsize: %d)\n",
+		       num_receivers, comm_size);
+	}
+
+	MTRand mtrand;
+	std::vector<int> receivers_bucket;
+	std::vector<int> available_nodes_bucket;
+	int receiver, i, src;
+	int myrand_pos;
+
+	if(level != 0) return;
+
+	/* Initialize the available_nodes_bucket vector with values from 0 to comm_size - 1
+	 * Then we will use this vector to pull first i receivers and random source nodes that
+	 * send traffic to the receivers. Each source node sends traffic to one receiver, but
+	 * each receivers is receiving traffic from more than one sources. Everytime we pull a
+	 * value from the bucket we remove it, thus, ensuring that we will not have sources
+	 * sending traffic to more than one receivers */
+	boost::assign::push_back(available_nodes_bucket).repeat_fun(comm_size, next<int>(0));
+
+	/* First pull out of the available_nodes_bucket the first num_receivers receiver nodes
+	 * and put them in the bucket receivers_bucket */
+	for (receiver = 0; receiver < num_receivers; receiver++) {
+		receivers_bucket.push_back(available_nodes_bucket.at(0));
+
+		available_nodes_bucket.erase(available_nodes_bucket.begin());
+	}
+
+	/* Now choose random sources and make them to communicate with one receiver at a time */
+	for (i = 0; available_nodes_bucket.size() > 0; i++) {
+		receiver = receivers_bucket.at(i % num_receivers);
+
+		myrand_pos = mtrand.randInt(available_nodes_bucket.size() - 1);
+
+		/* Choose a random source and remove it from the bucket */
+		src = available_nodes_bucket.at(myrand_pos);
+		available_nodes_bucket.erase(available_nodes_bucket.begin() + myrand_pos);
+
+		ptrn->push_back(std::pair<int, int>(src, receiver));
+	}
 }
 
 void printptrn(ptrn_t *ptrn, namelist_t *namelist) {
@@ -436,13 +479,13 @@ void genptrn_by_name(ptrn_t *ptrn, char *ptrnname, void *ptrnarg, int comm_size,
 		genptrn_by_name(&ptrn1, ptrnvsptrn.ptrn1, ptrnvsptrn.ptrnarg1, partcomm_size, 0, level);
 		genptrn_by_name(&ptrn2, ptrnvsptrn.ptrn2, ptrnvsptrn.ptrnarg2, comm_size - partcomm_size, 0, level_ptrn2);
 
-		if ((ptrn2.size()==0) && (ptrn1.size()!=0)) {
-			level_ptrn2=0;
-			genptrn_by_name(&ptrn2, ptrnvsptrn.ptrnargstr2, ptrnvsptrn.ptrnarg2, comm_size - partcomm_size, 0, level_ptrn2);
+		if ((ptrn2.size() == 0) && (ptrn1.size()!= 0)) {
+			level_ptrn2 = 0;
+			genptrn_by_name(&ptrn2, ptrnvsptrn.ptrn2, ptrnvsptrn.ptrnarg2, comm_size - partcomm_size, 0, level_ptrn2);
 		}
 
-		level_ptrn2++;
 		merge_two_patterns_into_one(&ptrn1, &ptrn2, partcomm_size, ptrn);
+		level_ptrn2++;
 	}
 	else {
 		printf("ERROR: %s pattern not implemented\n", ptrnname);
