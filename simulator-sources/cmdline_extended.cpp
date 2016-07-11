@@ -261,9 +261,9 @@ static void process_ptrnargs(IN char *ptrn,
 		 */
 		regex_t regex; /* We will compile our regular expression in regex */
 		const int numGroups = 7;  /* We expect a max of 4 groups in a single match: ptrn1, arg1, ptrn2, arg2
-                                           * However, the regex matches once the complete string, plus some uneccessary
-                                           * groups (I couldn't find how to exclude a match from group in C... ?: is
-                                           * not working) that's why we choose numGroups = 7; */
+		                           * However, the regex matches once the complete string, plus some uneccessary
+		                           * groups (I couldn't find how to exclude a match from group in C... ?: is
+		                           * not working) that's why we choose numGroups = 7; */
 		regmatch_t matchedGroups[numGroups]; /* Contains the matches found */
 		int ret, g, i, start_pos, end_pos;
 		char *cursor = ptrnarg;

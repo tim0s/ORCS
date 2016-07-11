@@ -298,8 +298,8 @@ int main(int argc, char *argv[]) {
 				                cmdargs.args_info.commsize_arg, cmdargs.args_info.part_commsize_arg,
 				                level);
 
-				if ((cmdargs.args_info.printptrn_given) && (mynode == 0)) { printptrn(&ptrn, &final_namelist); }
 				if (ptrn.size()==0 || (cmdargs.args_info.ptrn_level_arg > -1 && level > cmdargs.args_info.ptrn_level_arg)) {break;}
+				if ((cmdargs.args_info.printptrn_given) && (mynode == 0)) { printptrn(&ptrn, &final_namelist); }
 
 				simulation_with_metric(cmdargs.args_info.metric_arg, &ptrn, &final_namelist, RUN);
 
