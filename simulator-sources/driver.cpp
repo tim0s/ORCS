@@ -25,6 +25,7 @@
 Agraph_t *mygraph;
 
 extern void perform_sanity_checks_in_args(IN OUT cmdargs_t *cmdargs);
+extern void cleanup_args(IN char *ptrn, void *ptrnarg);
 
 int main(int argc, char *argv[]) {
 	
@@ -46,9 +47,8 @@ int main(int argc, char *argv[]) {
 			
 			//void genptrn_by_name(ptrn_t *ptrn, char *name, char *frsname, char *secname, int comm_size, int partcomm_size, int level) {
 			genptrn_by_name(&ptrn, cmdargs.args_info.ptrn_arg, cmdargs.ptrnarg,
-							cmdargs.args_info.ptrnfst_arg, cmdargs.args_info.ptrnsec_arg,
-							cmdargs.args_info.commsize_arg, cmdargs.args_info.part_commsize_arg,
-							level);
+			                cmdargs.args_info.commsize_arg, cmdargs.args_info.part_commsize_arg,
+			                level);
 			if (ptrn.size() == 0) { break; }
 
 			level++; //proceed to next level
@@ -73,13 +73,13 @@ int main(int argc, char *argv[]) {
 		cmdargs.args_info.commsize_arg = complete_namelist.size() - complete_namelist.size() % 2;
 	} else if (cmdargs.args_info.commsize_arg > complete_namelist.size()) {
 		printf("You chose a very large 'commsize'.\n"
-			   "The maximum possible communication size is %d\n", complete_namelist.size());
+		       "The maximum possible communication size is %d\n", complete_namelist.size());
 		exit(EXIT_FAILURE);
 	}
 
 	if(mynode == 0) { // print graph info
 
-		print_commandline_options(stdout, &cmdargs.args_info);
+		print_commandline_options(stdout, &cmdargs);
 
 		if (cmdargs.args_info.checkinputfile_given) {
 			std::cout << "Number of hosts in the inputfile: " << complete_namelist.size() << "\n";
@@ -114,7 +114,7 @@ int main(int argc, char *argv[]) {
 		std::cout << "Number of nodes in the inputfile: " << agnnodes(mygraph) << "\n";
 		std::cout << "Number of edges in the inputfile: " << agnedges(mygraph) << "\n";
 	}
-	
+
 	if (cmdargs.args_info.routequal_given) {
 		cable_cong_map_t cable_cong;
 		int nconn = namelist.size()*namelist.size();
@@ -264,7 +264,7 @@ int main(int argc, char *argv[]) {
 
 		int level = cmdargs.args_info.ptrn_level_arg;
 		if(level < 0) level = 0;
-		
+
 		/* Shuffle the list */
 		shuffle_namelist(&namelist);
 
@@ -293,14 +293,13 @@ int main(int argc, char *argv[]) {
 			// TODO: uebelst beschissen but a fast solution to the problem.
 			while (1) {
 				ptrn_t ptrn;
-				//void genptrn_by_name(ptrn_t *ptrn, char *name, char *frsname, char *secname, int comm_size, int partcomm_size, int level) {
-				genptrn_by_name(&ptrn, cmdargs.args_info.ptrn_arg, cmdargs.ptrnarg,
-								cmdargs.args_info.ptrnfst_arg, cmdargs.args_info.ptrnsec_arg,
-								cmdargs.args_info.commsize_arg, cmdargs.args_info.part_commsize_arg,
-								level);
 
-				if ((cmdargs.args_info.printptrn_given) && (mynode == 0)) { printptrn(&ptrn, &final_namelist); }
+				genptrn_by_name(&ptrn, cmdargs.args_info.ptrn_arg, cmdargs.ptrnarg,
+				                cmdargs.args_info.commsize_arg, cmdargs.args_info.part_commsize_arg,
+				                level);
+
 				if (ptrn.size()==0 || (cmdargs.args_info.ptrn_level_arg > -1 && level > cmdargs.args_info.ptrn_level_arg)) {break;}
+				if ((cmdargs.args_info.printptrn_given) && (mynode == 0)) { printptrn(&ptrn, &final_namelist); }
 
 				simulation_with_metric(cmdargs.args_info.metric_arg, &ptrn, &final_namelist, RUN);
 
@@ -320,12 +319,12 @@ int main(int argc, char *argv[]) {
 
 	//	simulation_with_metric(args_info.metric_arg, NULL, &namelist, ACCOUNT);
 	exchange_results_by_metric(cmdargs.args_info.metric_arg, mynode, allnodes);
-	print_results(&cmdargs.args_info, mynode, allnodes);
+	print_results(&cmdargs, mynode, allnodes);
 
 	MPI_Finalize();
 	agclose(mygraph);
 
-	free(cmdargs.ptrnarg);
+	cleanup_args(cmdargs.args_info.ptrn_arg, cmdargs.ptrnarg);
 
 	return EXIT_SUCCESS;
 }

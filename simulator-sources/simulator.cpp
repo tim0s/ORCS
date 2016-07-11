@@ -157,9 +157,8 @@ void simulation_dep_max_delay(cmdargs_t *cmdargs, namelist_t *namelist, int vali
 		//void genptrn_by_name(ptrn_t *ptrn, char *name, char *frsname, char *secname, int comm_size, int partcomm_size, int level) {
 
 		genptrn_by_name(&ptrn, cmdargs->args_info.ptrn_arg, cmdargs->ptrnarg,
-						cmdargs->args_info.ptrnfst_arg, cmdargs->args_info.ptrnsec_arg,
-						cmdargs->args_info.commsize_arg, cmdargs->args_info.part_commsize_arg,
-						level++);
+		                cmdargs->args_info.commsize_arg, cmdargs->args_info.part_commsize_arg,
+		                level++);
 		if (ptrn.size()==0) break;
 		//printf("level: %i\n", level-1);
 		if ((cmdargs->args_info.printptrn_given) && (myrank== 0)) { printptrn(&ptrn, namelist); }
@@ -248,9 +247,8 @@ void simulation_dep_max_delay(cmdargs_t *cmdargs, namelist_t *namelist, int vali
 	{
 		ptrn_t ptrn;
 		genptrn_by_name(&ptrn, cmdargs->args_info.ptrn_arg, cmdargs->ptrnarg,
-						cmdargs->args_info.ptrnfst_arg, cmdargs->args_info.ptrnsec_arg,
-						cmdargs->args_info.commsize_arg, cmdargs->args_info.part_commsize_arg,
-						0);
+		                cmdargs->args_info.commsize_arg, cmdargs->args_info.part_commsize_arg,
+		                0);
 		int max=0;
 		for (ptrn_t::iterator iter_ptrn = ptrn.begin(); iter_ptrn != ptrn.end(); iter_ptrn++) {
 			if((iter_ptrn->first >= valid_until) || (iter_ptrn->second >= valid_until)) continue;
@@ -510,7 +508,7 @@ unsigned long long convert_nodename_to_guid(std::string nodename) {
 }
 
 void get_guidlist_from_namelist(IN namelist_t *namelist,
-								OUT guidlist_t *guidlist) {
+                                OUT guidlist_t *guidlist) {
 
 	/** This function gets a GUID list from the provided node namelist **/
 
@@ -523,8 +521,8 @@ void get_guidlist_from_namelist(IN namelist_t *namelist,
 }
 
 void get_namelist_from_guidlist(IN guidlist_t *guidlist,
-								IN namelist_t *complete_namelist,
-								OUT namelist_t *namelist) {
+                                IN namelist_t *complete_namelist,
+                                OUT namelist_t *namelist) {
 
 	/** This function will return a namelist with the same order as
 	 *  the one in the guidlist **/
@@ -563,7 +561,7 @@ void get_namelist_from_graph(namelist_t *namelist) {
 }
 
 void get_namelist_from_graph(OUT namelist_t *namelist,
-				   OUT guidlist_t *guidlist) {
+                             OUT guidlist_t *guidlist) {
 	
 	/** This function places an array of strings (the node names) at the given
 	 * position and returns the number of elements in that array. This list should
@@ -873,8 +871,8 @@ void my_mpi_init(int *argc, char **argv[], int *rank, int *comm_size) {
 	MPI_Comm_size(MPI_COMM_WORLD, comm_size);
 	MPI_Comm_rank(MPI_COMM_WORLD, rank);
 	std::cout << "Hello from MPI node with rank " << *rank << ".\n" <<
-				 "Total MPI nodes participating in the simulation: " <<
-				 *comm_size <<  std::endl << std::endl;
+	             "Total MPI nodes participating in the simulation: " <<
+	             *comm_size <<  std::endl << std::endl;
 }
 
 void read_input_graph(char *filename) {
@@ -920,7 +918,7 @@ void tag_edges(Agraph_t *mygraph) {
 }
 
 void read_node_ordering(IN char *filename,
-						OUT guidlist_t *guidorder_list) {
+                        OUT guidlist_t *guidorder_list) {
 
 	char line[PARSE_GUID_BUFLEN];
 	FILE *fd;
@@ -947,8 +945,8 @@ void read_node_ordering(IN char *filename,
 		if (e == p || (!isspace(*e) && *e != '#' && *e != '\0')) {
 			fclose(fd);
 			printf("Error when reading from file %s\n"
-				   "GUID %s looks like it is not a valid GUID (expected a valid hex number per line in the file)\n",
-				   filename, p);
+			       "GUID %s looks like it is not a valid GUID (expected a valid hex number per line in the file)\n",
+			       filename, p);
 			exit(EXIT_FAILURE);
 		}
 
@@ -1074,30 +1072,36 @@ void bcast_namelist(namelist_t *namelist, int comm_size, int rank) {
 	free(buffer);
 }
 
-void print_commandline_options(FILE *fd, gengetopt_args_info *args_info) {
-	fprintf(fd, "Input File: %s\n", args_info->input_file_arg);
-	fprintf(fd, "Output File: %s\n", args_info->output_file_arg);
-	fprintf(fd, "Commsize: %d\n", args_info->commsize_arg);
-	fprintf(fd, "Pattern: %s\n", args_info->ptrn_arg);
-	fprintf(fd, "Level: %d\n", args_info->ptrn_level_arg);
-	fprintf(fd, "Runs: %d\n", args_info->num_runs_arg);
-	fprintf(fd, "Subset: %s\n", args_info->subset_arg);
-	fprintf(fd, "Metric: %s\n", args_info->metric_arg);
-	fprintf(fd, "Fstptrn: %s\n", args_info->ptrnfst_arg);
-	fprintf(fd, "Secptrn: %s\n", args_info->ptrnsec_arg);
-	fprintf(fd, "Part_commsize: %i\n\n", args_info->part_commsize_arg);
+void print_commandline_options(FILE *fd, cmdargs_t *cmdargs) {
+	fprintf(fd, "Input File: %s\n", cmdargs->args_info.input_file_arg);
+	fprintf(fd, "Output File: %s\n", cmdargs->args_info.output_file_arg);
+	fprintf(fd, "Commsize: %d\n", cmdargs->args_info.commsize_arg);
+	fprintf(fd, "Pattern: %s\n", cmdargs->args_info.ptrn_arg);
+	if (strcmp(cmdargs->args_info.ptrn_arg, "ptrnvsptrn") == 0) {
+		ptrnvsptrn_t ptrnvsptrn = *((ptrnvsptrn_t *)cmdargs->ptrnarg);
+
+		fprintf(fd, "    First Pattern: %s%s%s\n", ptrnvsptrn.ptrn1,
+		        strlen(ptrnvsptrn.ptrnargstr1) ? "," : "", ptrnvsptrn.ptrnargstr1);
+		fprintf(fd, "   Second Pattern: %s%s%s\n", ptrnvsptrn.ptrn2,
+		        strlen(ptrnvsptrn.ptrnargstr2) ? "," : "", ptrnvsptrn.ptrnargstr2);
+	}
+	fprintf(fd, "Level: %d\n", cmdargs->args_info.ptrn_level_arg);
+	fprintf(fd, "Runs: %d\n", cmdargs->args_info.num_runs_arg);
+	fprintf(fd, "Subset: %s\n", cmdargs->args_info.subset_arg);
+	fprintf(fd, "Metric: %s\n", cmdargs->args_info.metric_arg);
+	fprintf(fd, "Part_commsize: %i\n\n", cmdargs->args_info.part_commsize_arg);
 }
 
-void print_results(gengetopt_args_info *args_info, int mynode, int allnodes) {
+void print_results(cmdargs_t *cmdargs, int mynode, int allnodes) {
 
 	if (mynode == 0) {
-		char *filename = args_info->output_file_arg;
+		char *filename = cmdargs->args_info.output_file_arg;
 		if (strcmp(filename, "-") == 0) {
-			if (strcmp(args_info->metric_arg, "dep_max_delay") == 0) {print_statistics_max_delay(stdout);}
-			if (strcmp(args_info->metric_arg, "sum_max_cong") == 0) {print_statistics_max_congestions(stdout);}
-			if (strcmp(args_info->metric_arg, "hist_acc_band") == 0) {print_histogram(stdout);}
-			if (strcmp(args_info->metric_arg, "hist_max_cong") == 0) {printbigbucket(stdout);}
-			if (strcmp(args_info->metric_arg, "get_cable_cong") == 0) {write_graph_with_congestions();}
+			if (strcmp(cmdargs->args_info.metric_arg, "dep_max_delay") == 0) {print_statistics_max_delay(stdout);}
+			if (strcmp(cmdargs->args_info.metric_arg, "sum_max_cong") == 0) {print_statistics_max_congestions(stdout);}
+			if (strcmp(cmdargs->args_info.metric_arg, "hist_acc_band") == 0) {print_histogram(stdout);}
+			if (strcmp(cmdargs->args_info.metric_arg, "hist_max_cong") == 0) {printbigbucket(stdout);}
+			if (strcmp(cmdargs->args_info.metric_arg, "get_cable_cong") == 0) {write_graph_with_congestions();}
 		}
 		else {
 			FILE *fd;
@@ -1108,12 +1112,12 @@ void print_results(gengetopt_args_info *args_info, int mynode, int allnodes) {
 				exit(EXIT_FAILURE);
 			}
 			else {
-				print_commandline_options(fd, args_info);
-				if (strcmp(args_info->metric_arg, "hist_acc_band") == 0) {print_histogram(fd);}
-				if (strcmp(args_info->metric_arg, "sum_max_cong") == 0) {print_statistics_max_congestions(fd);}
-				if (strcmp(args_info->metric_arg, "dep_max_delay") == 0) {print_statistics_max_delay(fd);}
-				if (strcmp(args_info->metric_arg, "hist_max_cong") == 0) {printbigbucket(fd);}
-				if (strcmp(args_info->metric_arg, "get_cable_cong") == 0) {print_cable_cong(fd);}
+				print_commandline_options(fd, cmdargs);
+				if (strcmp(cmdargs->args_info.metric_arg, "hist_acc_band") == 0) {print_histogram(fd);}
+				if (strcmp(cmdargs->args_info.metric_arg, "sum_max_cong") == 0) {print_statistics_max_congestions(fd);}
+				if (strcmp(cmdargs->args_info.metric_arg, "dep_max_delay") == 0) {print_statistics_max_delay(fd);}
+				if (strcmp(cmdargs->args_info.metric_arg, "hist_max_cong") == 0) {printbigbucket(fd);}
+				if (strcmp(cmdargs->args_info.metric_arg, "get_cable_cong") == 0) {print_cable_cong(fd);}
 				fclose(fd);
 			}
 		}
