@@ -356,14 +356,18 @@ double get_acc_bandwidth(bucket_t *bucket) {
 	double sum=0;
 	double res=0;
 
-	assert(bucket->at(0) == 0);
-	for (count=1; count<bucket->size(); count++) {
-		if (bucket->at(count) > 0) {
-			sum += bucket->at(count);
-			res += (((double) bucket->at(count)) / count);
+	if (bucket->size() != 0) {
+		assert(bucket->at(0) == 0);
+		for (count=1; count<bucket->size(); count++) {
+			if (bucket->at(count) > 0) {
+				sum += bucket->at(count);
+				res += (((double) bucket->at(count)) / count);
+			}
 		}
+		return res/sum;
+	} else {
+		return -1.0;
 	}
-	return res/sum;
 }
 
 void account_stats(bucket_t *bucket) {
