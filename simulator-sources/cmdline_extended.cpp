@@ -335,6 +335,7 @@ static void process_ptrnargs(IN char *ptrn,
 				strncpy(complete_match, cursor,
 				        (end_pos - start_pos) < max_match_size ?
 				            end_pos - start_pos : max_match_size);
+				complete_match[max_match_size - 1] = 0;
 
 				/* Check if the complete matched string is the same as the ptrnarg. */
 				if (strncmp(ptrnarg, complete_match, strlen(complete_match)) != 0) {
@@ -369,10 +370,12 @@ static void process_ptrnargs(IN char *ptrn,
 
 				/* Copy the matched group strings in the individual_match array.
 				 * Perform some bound checks. */
-				if (cur_match != NULL)
+				if (cur_match != NULL) {
 					strncpy(cur_match, cursor + start_pos,
-					        (end_pos - start_pos) < MAX_ARG_SIZE - start_pos ?
-					            end_pos - start_pos : MAX_ARG_SIZE - start_pos);
+					        (end_pos - start_pos) < MAX_ARG_SIZE ?
+					            end_pos - start_pos : MAX_ARG_SIZE);
+					cur_match[MAX_ARG_SIZE - 1] = 0;
+				}
 			}
 
 			//printf ("Matched in group %d: '%.*s' (bytes %d:%d)\n", g,
