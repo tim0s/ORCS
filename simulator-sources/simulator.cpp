@@ -1076,7 +1076,11 @@ void print_commandline_options(FILE *fd, cmdargs_t *cmdargs) {
 	fprintf(fd, "Input File: %s\n", cmdargs->args_info.input_file_arg);
 	fprintf(fd, "Output File: %s\n", cmdargs->args_info.output_file_arg);
 	fprintf(fd, "Commsize: %d\n", cmdargs->args_info.commsize_arg);
-	fprintf(fd, "Pattern: %s\n", cmdargs->args_info.ptrn_arg);
+	printf("lalala\n");
+	fprintf(fd, "Pattern: %s%s%s\n", cmdargs->args_info.ptrn_arg,
+	        cmdargs->args_info.ptrnarg_arg ? "," : "",
+	        cmdargs->args_info.ptrnarg_arg ? cmdargs->args_info.ptrnarg_arg : "");
+	printf("lalala2\n");
 	if (strcmp(cmdargs->args_info.ptrn_arg, "ptrnvsptrn") == 0) {
 		ptrnvsptrn_t ptrnvsptrn = *((ptrnvsptrn_t *)cmdargs->ptrnarg);
 

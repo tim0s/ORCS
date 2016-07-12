@@ -440,7 +440,8 @@ void perform_sanity_checks_in_args(IN OUT cmdargs_t *cmdargs) {
 
 	/* Ensure that if a pattern argument is provided, it has been
 	 * provided in the correct format/type needed by the chosen pattern */
-	process_ptrnargs(ptrn, ptrnarg, cmdargs);
+	if (ptrnarg != NULL)
+		process_ptrnargs(ptrn, ptrnarg, cmdargs);
 }
 
 /**
