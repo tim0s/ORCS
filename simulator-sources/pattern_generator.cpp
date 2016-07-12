@@ -383,8 +383,6 @@ void genptrn_recdbl(int comm_size, int level, ptrn_t *ptrn) {
 void genptrn_nreceivers(int comm_size, int level, int num_receivers, ptrn_t *ptrn) {
 	if (level != 0) return;
 
-	fprintf(stderr, "RECEIVERS PTRN: comm_size: %d, num_receivers: %d\n", comm_size, num_receivers);
-
 	/* We cannot have more than comm_size / 2 receivers, because then we will
 	 * not have enough senders to send traffic to all of the receivers. One
 	 * sender sends traffic to only one receiver at a time. */
