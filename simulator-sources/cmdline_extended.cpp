@@ -217,7 +217,12 @@ static void process_ptrnargs(IN char *ptrn,
                              IN OUT cmdargs_t *cmdargs) {
 
 	/* If the pattern argument is "help", just print the help
-	 * message corresponding to that ptrn and exit. */
+	 * message corresponding to that ptrn and exit.
+	 * TODO: Implement a help message for each one of the patterns, because
+	 *       at the moment if a user calls, for example, the rand pattern with
+	 *       'help' ptrnarg, the simulator will just exit without printing
+	 *       anything.
+	 */
 	if (strcmp(ptrnarg, "help") == 0)
 		print_ptrnarg_help(ptrn, NULL);
 
@@ -265,7 +270,7 @@ static void process_ptrnargs(IN char *ptrn,
 		                           * groups (I couldn't find how to exclude a match from group in C... ?: is
 		                           * not working) that's why we choose numGroups = 7; */
 		regmatch_t matchedGroups[numGroups]; /* Contains the matches found */
-		int ret, g, i, start_pos, end_pos;
+		int ret, g, start_pos, end_pos;
 		char *cursor = ptrnarg;
 
 		const int max_match_size = MAX_ARG_SIZE * 4 + 1;
@@ -409,6 +414,10 @@ static void process_ptrnargs(IN char *ptrn,
 		ptrnvsptrn->ptrnarg2 = cmdargs_ptrn2.ptrnarg;
 
 		cmdargs->ptrnarg = (void *)ptrnvsptrn;
+	} else {
+
+		/* If the pattern cannot accept a ptrnarg, just set the cmdargs->ptrnarg to NULL */
+		cmdargs->ptrnarg = NULL;
 	}
 
 	return;
@@ -427,8 +436,6 @@ void perform_sanity_checks_in_args(IN OUT cmdargs_t *cmdargs) {
 
 	char *ptrn = cmdargs->args_info.ptrn_arg;
 	char *ptrnarg = cmdargs->args_info.ptrnarg_arg;
-
-	cmdargs->ptrnarg = NULL;
 
 	/* First check the pattern name, and if it needs a mandatory
 	 * pattern argument that hasn't been provided, warn and exit. */

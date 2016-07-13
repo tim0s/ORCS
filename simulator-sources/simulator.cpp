@@ -1076,18 +1076,18 @@ void print_commandline_options(FILE *fd, cmdargs_t *cmdargs) {
 	fprintf(fd, "Input File: %s\n", cmdargs->args_info.input_file_arg);
 	fprintf(fd, "Output File: %s\n", cmdargs->args_info.output_file_arg);
 	fprintf(fd, "Commsize: %d\n", cmdargs->args_info.commsize_arg);
-	printf("lalala\n");
 	fprintf(fd, "Pattern: %s%s%s\n", cmdargs->args_info.ptrn_arg,
-	        cmdargs->args_info.ptrnarg_arg ? "," : "",
-	        cmdargs->args_info.ptrnarg_arg ? cmdargs->args_info.ptrnarg_arg : "");
-	printf("lalala2\n");
+	        cmdargs->ptrnarg ? "," : "",
+	        cmdargs->ptrnarg ? cmdargs->args_info.ptrnarg_arg : "");
 	if (strcmp(cmdargs->args_info.ptrn_arg, "ptrnvsptrn") == 0) {
 		ptrnvsptrn_t ptrnvsptrn = *((ptrnvsptrn_t *)cmdargs->ptrnarg);
 
 		fprintf(fd, "    First Pattern: %s%s%s\n", ptrnvsptrn.ptrn1,
-		        strlen(ptrnvsptrn.ptrnargstr1) ? "," : "", ptrnvsptrn.ptrnargstr1);
+		        ptrnvsptrn.ptrnarg1 ? "," : "",
+		        ptrnvsptrn.ptrnarg1 ? ptrnvsptrn.ptrnargstr1 : "");
 		fprintf(fd, "   Second Pattern: %s%s%s\n", ptrnvsptrn.ptrn2,
-		        strlen(ptrnvsptrn.ptrnargstr2) ? "," : "", ptrnvsptrn.ptrnargstr2);
+		        ptrnvsptrn.ptrnarg2 ? "," : "",
+		        ptrnvsptrn.ptrnarg2 ? ptrnvsptrn.ptrnargstr2 : "");
 	}
 	fprintf(fd, "Level: %d\n", cmdargs->args_info.ptrn_level_arg);
 	fprintf(fd, "Runs: %d\n", cmdargs->args_info.num_runs_arg);
