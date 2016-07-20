@@ -9,10 +9,23 @@
 #include "cmdline.h"
 #include "MersenneTwister.h"
 
+/* Why the do {..} while(0_ is used: http://stackoverflow.com/a/257425/1275161 */
+#define print_once(fmt, ...)              \
+	do  {                                 \
+		static bool __print_once = false; \
+        if(!__print_once) {               \
+			__print_once = true;          \
+              printf(fmt, ##__VA_ARGS__); \
+		}                                 \
+	} while(0);
+
 #define RUN 100
 #define ACCOUNT 101
 #define PARSE_GUID_BUFLEN  256
-#define MAX_ARG_SIZE 80
+#define MAX_ARG_SIZE 256  /* Defines the maximum ptrnarg size */
+#define MAX_PTRNVSPTRN_ARG_SIZE (MAX_ARG_SIZE * 4 + 1) /* Because in the ptrnvsptrn we need to pass 4 args, have
+                                                        * a separate definition for the max ptrnvsptrn size */
+
 /* IN and OUT are used to indicate if a function's
  * parameter is used as input or output */
 #define IN
@@ -33,6 +46,11 @@ typedef struct {
 	char ptrnargstr2[MAX_ARG_SIZE];  // ptrnarg2 string
 	void *ptrnarg2;                  // ptrnarg2 converted in the expected data type
 } ptrnvsptrn_t;
+
+typedef struct {
+	int num_receivers;
+	double chance_to_send_to_a_receiver;
+} receivers_t;
 
 typedef std::pair<int, int> pair_t;
 typedef std::vector<pair_t> ptrn_t;

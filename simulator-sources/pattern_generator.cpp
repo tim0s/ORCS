@@ -380,26 +380,33 @@ void genptrn_recdbl(int comm_size, int level, ptrn_t *ptrn) {
 	} else return;
 }
 
-void genptrn_nreceivers(int comm_size, int level, int num_receivers, ptrn_t *ptrn) {
+void genptrn_nreceivers_with_chance(int comm_size, int level, int num_receivers,
+                                    double chance_to_communicate_with_a_receiver,
+                                    ptrn_t *ptrn) {
 	if (level != 0) return;
+
+	print_once("#*** INFO: chance to send to a receiver: %0.1f\%\n"
+	           "#***                number of receivers: %d\n",
+	           chance_to_communicate_with_a_receiver * 100,
+	           num_receivers);
 
 	/* We cannot have more than comm_size / 2 receivers, because then we will
 	 * not have enough senders to send traffic to all of the receivers. One
 	 * sender sends traffic to only one receiver at a time. */
 	if (num_receivers > floor((double)comm_size / 2)) {
 		num_receivers = floor((double)comm_size / 2);
-		printf("#*** WARN: cannot have more than commsize/2 receivers.\n"
-		       "     Correcting number of receivers to %d (commsize: %d)\n",
-		       num_receivers, comm_size);
+		print_once("#*** WARN: cannot have more than commsize/2 receivers.\n"
+		           "     Correcting number of receivers to %d (commsize: %d)\n",
+		           num_receivers, comm_size);
 	}
 
 	MTRand mtrand;
 	std::vector<int> receivers_bucket;
-	std::vector<int> available_nodes_bucket;
-	int receiver, i, src;
+	std::vector<int> non_receivers_bucket;
+	std::vector<int> available_src_nodes_bucket;
+	int receiver, i, src, dst;
 	int myrand_pos;
-
-	if(level != 0) return;
+	double dice;
 
 	/* Initialize the available_nodes_bucket vector with values from 0 to comm_size - 1
 	 * Then we will use this vector to pull first i receivers and random source nodes that
@@ -407,27 +414,55 @@ void genptrn_nreceivers(int comm_size, int level, int num_receivers, ptrn_t *ptr
 	 * each receivers is receiving traffic from more than one sources. Everytime we pull a
 	 * value from the bucket we remove it, thus, ensuring that we will not have sources
 	 * sending traffic to more than one receivers */
-	boost::assign::push_back(available_nodes_bucket).repeat_fun(comm_size, next<int>(0));
+	boost::assign::push_back(available_src_nodes_bucket).repeat_fun(comm_size, next<int>(0));
+
+	non_receivers_bucket = available_src_nodes_bucket;
 
 	/* First pull out of the available_nodes_bucket the first num_receivers receiver nodes
 	 * and put them in the bucket receivers_bucket */
 	for (receiver = 0; receiver < num_receivers; receiver++) {
-		receivers_bucket.push_back(available_nodes_bucket.at(0));
+		receivers_bucket.push_back(available_src_nodes_bucket.at(0));
 
-		available_nodes_bucket.erase(available_nodes_bucket.begin());
+		available_src_nodes_bucket.erase(available_src_nodes_bucket.begin());
 	}
 
-	/* Now choose random sources and make them to communicate with one receiver at a time */
-	for (i = 0; available_nodes_bucket.size() > 0; i++) {
+	/* Now choose random sources and make them to communicate with one receiver at a time
+	 * If dice <= chance_to_communicate_with_a_receiver. Otherwise, communicate with a
+	 * random node. */
+	for (i = 0; available_src_nodes_bucket.size() > 0; i++) {
 		receiver = receivers_bucket.at(i % num_receivers);
-
-		myrand_pos = mtrand.randInt(available_nodes_bucket.size() - 1);
+		dst = receiver;
+		myrand_pos = mtrand.randInt(available_src_nodes_bucket.size() - 1);
 
 		/* Choose a random source and remove it from the bucket */
-		src = available_nodes_bucket.at(myrand_pos);
-		available_nodes_bucket.erase(available_nodes_bucket.begin() + myrand_pos);
+		src = available_src_nodes_bucket.at(myrand_pos);
+		available_src_nodes_bucket.erase(available_src_nodes_bucket.begin() + myrand_pos);
 
-		ptrn->push_back(std::pair<int, int>(src, receiver));
+		/* Throw a dice to decide if the src node will communicate with the receiver.
+		 * If the dice value is greater than 'chance_to_communicate_with_a_receiver',
+		 * then select a dst other than receiver, from the non_receivers_bucket. */
+		dice = mtrand.rand();
+		if ((dice > chance_to_communicate_with_a_receiver &&
+		     non_receivers_bucket.size() > 0)) {
+
+			/* Pick a new receiver if receiver == src, only if the size of the bucket
+			 * 'non_receivers_bucket' is greater than 1 (meaning that we have more
+			 * options to choose from). */
+			do {
+				myrand_pos = mtrand.randInt(non_receivers_bucket.size() - 1);
+				receiver = non_receivers_bucket.at(myrand_pos);
+			} while (receiver == src && non_receivers_bucket.size() > 1);
+
+			/* If the newly chosen receiver is not the same as src, replace the already
+			 * existing dst. */
+			if (receiver != src) {
+				dst = receiver;
+				non_receivers_bucket.erase(non_receivers_bucket.begin() + myrand_pos);
+			}
+
+		}
+
+		ptrn->push_back(std::pair<int, int>(src, dst));
 	}
 }
 
@@ -467,7 +502,19 @@ void genptrn_by_name(ptrn_t *ptrn, char *ptrnname, void *ptrnarg, int comm_size,
 	else if (strcmp(ptrnname, "ring") == 0) { genptrn_ring(comm_size, level, ptrn); }
 	else if (strcmp(ptrnname, "recdbl") == 0) { genptrn_recdbl(comm_size, level, ptrn); }
 	else if (strcmp(ptrnname, "neighbor") == 0) { genptrn_nneighbor(comm_size, level, *((int*)ptrnarg), ptrn); }
-	else if (strcmp(ptrnname, "receivers") == 0) { genptrn_nreceivers(comm_size, level, *((int*)ptrnarg), ptrn); }
+	else if (strcmp(ptrnname, "receivers") == 0) {
+
+		receivers_t receivers_arg = *((receivers_t *)ptrnarg);
+
+		/* If the optional argument chance_to_send_to_a_receiver has been set by the user,
+		 * then use 100% chance to send to the receivers. */
+		if (receivers_arg.chance_to_send_to_a_receiver == -1.0)
+			receivers_arg.chance_to_send_to_a_receiver = 1.0;
+			//genptrn_nreceivers(comm_size, level, receivers_arg.num_receivers, ptrn);
+
+		genptrn_nreceivers_with_chance(comm_size, level, receivers_arg.num_receivers,
+		                               receivers_arg.chance_to_send_to_a_receiver, ptrn);
+	}
 	else if (strcmp(ptrnname, "ptrnvsptrn") == 0) {
 
 		static int level_ptrn2 = 0;

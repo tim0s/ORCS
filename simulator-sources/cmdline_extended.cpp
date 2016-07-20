@@ -216,6 +216,19 @@ static void process_ptrnargs(IN char *ptrn,
                              IN char *ptrnarg,
                              IN OUT cmdargs_t *cmdargs) {
 
+	int max_ptrn_size;
+
+	if (strcmp(ptrn, "ptrnvsptrn") == 0)
+		max_ptrn_size = MAX_PTRNVSPTRN_ARG_SIZE;
+	else
+		max_ptrn_size = MAX_ARG_SIZE;
+
+	/* Ensure that the user is not providing a string larger than what we can handle */
+	if (strlen(ptrnarg) > max_ptrn_size) {
+		fprintf(stderr, "ERROR: The max accepted arg size for ptrn '%s' is %d\n", ptrn, max_ptrn_size);
+		exit(EXIT_FAILURE);
+	}
+
 	/* If the pattern argument is "help", just print the help
 	 * message corresponding to that ptrn and exit.
 	 * TODO: Implement a help message for each one of the patterns, because
@@ -229,13 +242,12 @@ static void process_ptrnargs(IN char *ptrn,
 	/* If the pattern argument != "help", check which pattern
 	 * we are currently processing, and parse the pattern args
 	 * as necessary */
-	if ((strcmp(ptrn, "neighbor") == 0 ||
-	     strcmp(ptrn, "receivers") == 0)) {
+	if (strcmp(ptrn, "neighbor") == 0) {
 
-		/**
-		 * For neighbor or receivers pattern, the
-		 * pattern argument must be an integer
-		 */
+		/** ****************************************************************
+		 * For the neighbor pattern, the pattern argument must be
+		 * an integer greater than zero.
+		 *******************************************************************/
 
 		char *next_num;
 
@@ -251,13 +263,112 @@ static void process_ptrnargs(IN char *ptrn,
 
 		cmdargs->ptrnarg = (void *)ptrnarg_i;
 
+	} else if (strcmp(ptrn, "receivers") == 0) {
+
+		/** ****************************************************************
+		 * For the receivers pattern, the pattern argument must be a
+		 * string in this format:
+		 *     integer[,double]
+		 *
+		 * That is, a mandatory integer number greater than zero must
+		 * be provided, and an optional percentage that is following
+		 * after a comma, between 0.0 and 1.0 can be provided if the
+		 * user wants to have source nodes sending traffic to the
+		 * receiver based on a chance factor.
+		 *******************************************************************/
+
+		regex_t regex;
+		const int numGroups = 4;
+		regmatch_t matchedGroups[numGroups];
+		int ret, g, start_pos, end_pos;
+		char *cursor = ptrnarg;
+		char match[MAX_ARG_SIZE], *cur_match;
+
+		int num_receivers;
+		double chance_to_send_to_a_receiver;
+		receivers_t *receivers_args = (receivers_t *)malloc(sizeof(receivers_args));
+		if (receivers_args == NULL)
+			goto exit;
+
+		/* Default -1 indicates that the chance_to_send_to_a_receiver hasn't been provided by the user */
+		receivers_args->chance_to_send_to_a_receiver = -1;
+
+		/* Why I use double backslash to escape the 'dot': http://stackoverflow.com/a/18477178/1275161 */
+		ret = regcomp(&regex, "^([[:digit:]]+)(,([-+]?[0-9]*\\.?[0-9]+))?$", REG_EXTENDED);
+		if (ret) {
+			fprintf(stderr, "Could not compile regex\n");
+			exit(EXIT_FAILURE);
+		}
+
+		ret = regexec(&regex, cursor, numGroups, matchedGroups, 0);
+		if (ret)
+			/* No match, so print the error message and exit */
+			print_ptrnarg_help(ptrn, ptrnarg, true);
+
+		for (g = 0; g < numGroups; g++) {
+
+			if (matchedGroups[g].rm_so == -1)
+				continue;
+
+			start_pos = matchedGroups[g].rm_so;
+			end_pos = matchedGroups[g].rm_eo;
+
+			//printf("start: %d, finish: %d, rm_so: %d, rm_eo: %d\n", start_pos, end_pos,
+			//	   matchedGroups[g].rm_so, matchedGroups[g].rm_eo);
+
+			memset(match, 0, sizeof(match));
+			strncpy(match, cursor + start_pos,
+			        (end_pos - start_pos) < MAX_ARG_SIZE ?
+			            end_pos - start_pos : MAX_ARG_SIZE);
+			match[MAX_ARG_SIZE - 1] = 0;
+
+			//printf("Matching now: %s, cursor: %s\n", match, cursor);
+
+			if (g == 0) {
+				/* Check if the complete matched string is the same as the ptrnarg. */
+				if (strncmp(ptrnarg, match, strlen(match)) != 0) {
+					printf("here: %s, %s, %d\n", ptrnarg, match, strlen(match));
+					/* The complete string provided by the user should match exactly.
+					 * Otherwise print an error message and exit. */
+					print_ptrnarg_help(ptrn, ptrnarg, true);
+				}
+			} else {
+				char *next_num;
+
+				switch(g) {
+					case 1:
+						/* In the first group we must capture an integer */
+						num_receivers = strtoi(match, &next_num, 10);
+						if (strlen(next_num) != 0 || num_receivers < 1) {
+							free(receivers_args);
+							print_ptrnarg_help(ptrn, ptrnarg, true);
+						}
+						receivers_args->num_receivers = num_receivers;
+						break;
+					case 3:
+						/* In the third group we must capture a floating point number between 0 and 1 */
+						chance_to_send_to_a_receiver = strtod(match, &next_num);
+						if (strlen(next_num) != 0 ||
+						        (chance_to_send_to_a_receiver < 0 ||
+						         chance_to_send_to_a_receiver > 1)) {
+							free(receivers_args);
+							print_ptrnarg_help(ptrn, ptrnarg, true);
+						}
+						receivers_args->chance_to_send_to_a_receiver = chance_to_send_to_a_receiver;
+						break;
+				}
+			}
+		}
+
+		cmdargs->ptrnarg = (void *)receivers_args;
+
 	} else if (strcmp(ptrn, "ptrnvsptrn") == 0) {
 
-		/**
+		/** ****************************************************************
 		 * For ptrnvsptrn communication the pattern argument
 		 * must be a string of this format:
 		 *	   ptrn1(:arg1)?,ptrn2(:arg2)?
-		 */
+		 *******************************************************************/
 
 		/* For some help with C regex's:
 		 *    https://gist.github.com/ianmackinnon/3294587
@@ -273,19 +384,12 @@ static void process_ptrnargs(IN char *ptrn,
 		int ret, g, start_pos, end_pos;
 		char *cursor = ptrnarg;
 
-		const int max_match_size = MAX_ARG_SIZE * 4 + 1;
-		char complete_match[max_match_size], *cur_match;
+		char complete_match[MAX_PTRNVSPTRN_ARG_SIZE], *cur_match;
 		ptrnvsptrn_t *ptrnvsptrn = (ptrnvsptrn_t *)calloc(1, sizeof(*ptrnvsptrn));	/* Contains the extracted data. */
 		if (ptrnvsptrn == NULL)
 			goto exit;
 
 		memset(complete_match, 0, sizeof(complete_match));
-
-		/* Ensure that the user is not providing a string larger than what we can handle */
-		if (strlen(ptrnarg) > max_match_size) {
-			fprintf(stderr, "ERROR: The max accepted arg size is %d\n", max_match_size);
-			exit(EXIT_FAILURE);
-		}
 
 		/* Compile the regex first */
 		/* 1: ^                     <- Matches beginning of the line."
@@ -338,16 +442,15 @@ static void process_ptrnargs(IN char *ptrn,
 				 * Copy the complete matched string in the complete_match array.
 				 * Perform some bound checks. */
 				strncpy(complete_match, cursor,
-				        (end_pos - start_pos) < max_match_size ?
-				            end_pos - start_pos : max_match_size);
-				complete_match[max_match_size - 1] = 0;
+				        (end_pos - start_pos) < MAX_PTRNVSPTRN_ARG_SIZE ?
+				            end_pos - start_pos : MAX_PTRNVSPTRN_ARG_SIZE);
+				complete_match[MAX_PTRNVSPTRN_ARG_SIZE - 1] = 0;
 
 				/* Check if the complete matched string is the same as the ptrnarg. */
 				if (strncmp(ptrnarg, complete_match, strlen(complete_match)) != 0) {
 					printf("here: %s, %s, %d\n", ptrnarg, complete_match, strlen(complete_match));
 					/* The complete string provided by the user should match exactly.
-					 * Otherwise print an error message and exit.
-					 */
+					 * Otherwise print an error message and exit. */
 					print_ptrnarg_help(ptrn, ptrnarg, true);
 				}
 
