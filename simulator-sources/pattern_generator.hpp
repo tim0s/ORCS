@@ -50,6 +50,7 @@ void genptrn_nneighbor(int nprocs, int level, int neighbors, ptrn_t *ptrn,
 
 void genptrn_nreceivers_with_chance(int comm_size, int level, int num_receivers,
                                     double chance_to_communicate_with_a_receiver,
+                                    double chance_to_not_communicate_at_all,
                                     ptrn_t *ptrn, bool respect_print_once = true);
 
 void printptrn(ptrn_t *ptrn, namelist_t *namelist);

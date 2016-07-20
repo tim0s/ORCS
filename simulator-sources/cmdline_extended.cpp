@@ -191,14 +191,19 @@ static void print_ptrnarg_help(IN char *ptrn,
 		fprintf(stderr, "Pattern '%s' requires an integer ptrnarg that is greater than 0.\n", ptrn);
 	} else if (strcmp(ptrn, "receivers") == 0) {
 		fprintf(stderr, "Pattern '%s' requires a ptrnarg in the following format:\n"
-		        "         <num_receivers>[,<chance_factor>]\n"
+		        "         <num_receivers>[,<chance_factor_1>[,<chance_factor_2>]]\n"
 		        "         \n"
 		        "       The 'num_receivers' arg is a mandatory integer number greater than zero, and defines the number\n"
 		        "         of receivers that will be used in the experiment.\n"
-		        "       The 'chance_factor' arg is an optional percentage (accepts values between 0.0 and 1.0) and defines\n"
+		        "       The 'chance_factor_1' arg is an optional percentage (accepts values between 0.0 and 1.0) and defines\n"
 		        "         a chance that a chosen source node will have to communicate with a receiver in the pattern. If no\n"
-		        "         chance_factor is provided, the chance_factor is set to 1.0, and the chosen source nodes will always\n"
-		        "         communicate with a receiver.\n", ptrn);
+		        "         chance_factor_1 is provided, the chance_factor_1 is set to 1.0, and the chosen source nodes will\n"
+		        "         always communicate with a receiver.\n"
+		        "       The 'chance_factor_2' arg is another optional percentage (accepts values between 0.0 and 1.0) and\n"
+		        "         defines the chance that if a chosen source node is decided that will not communicate with a\n"
+		        "         receiver (based on chance_factor_1), there is a chance that it will stay idle (i.e. not communicate\n"
+		        "         at all with any other node). If the chance_factor_1 is set to 1.0, the chance_factor_2 will have no\n"
+		        "         effect in the experiment. The chance_factor_2 is set to 0.0 by default, i.e. there are no idle nodes.\n", ptrn);
 	} else if (strcmp(ptrn, "ptrnvsptrn") == 0) {
 		fprintf(stderr, "Pattern '%s' requires a string ptrnarg in the following format:\n"
 		        "         <pattern1>[:<arg2>]::<pattern2>[:<arg2>]\n"
@@ -292,23 +297,24 @@ static void process_ptrnargs(IN char *ptrn,
 		 *******************************************************************/
 
 		regex_t regex;
-		const int numGroups = 4;
+		const int numGroups = 6;
 		regmatch_t matchedGroups[numGroups];
 		int ret, g, start_pos, end_pos;
 		char *cursor = ptrnarg;
 		char match[MAX_ARG_SIZE];
 
 		int num_receivers;
-		double chance_to_send_to_a_receiver;
+		double process_a_chance;
 		receivers_t *receivers_args = (receivers_t *)malloc(sizeof(receivers_args));
 		if (receivers_args == NULL)
 			goto exit;
 
 		/* Default -1 indicates that the chance_to_send_to_a_receiver hasn't been provided by the user */
-		receivers_args->chance_to_send_to_a_receiver = -1;
+		receivers_args->chance_to_send_to_a_receiver = 1.0;
+		receivers_args->chance_to_not_send_at_all = 0.0;
 
 		/* Why I use double backslash to escape the 'dot': http://stackoverflow.com/a/18477178/1275161 */
-		ret = regcomp(&regex, "^([[:digit:]]+)(,([-+]?[0-9]*\\.?[0-9]+))?$", REG_EXTENDED);
+		ret = regcomp(&regex, "^([[:digit:]]+)(,([-+]?[0-9]*\\.?[0-9]+))?(,([-+]?[0-9]*\\.?[0-9]+))?$", REG_EXTENDED);
 		if (ret) {
 			fprintf(stderr, "Could not compile regex\n");
 			exit(EXIT_FAILURE);
@@ -360,15 +366,20 @@ static void process_ptrnargs(IN char *ptrn,
 						receivers_args->num_receivers = num_receivers;
 						break;
 					case 3:
-						/* In the third group we must capture a floating point number between 0 and 1 */
-						chance_to_send_to_a_receiver = strtod(match, &next_num);
+					case 5:
+						/* In the third and fifth group we must capture a floating
+						 * point number between 0 and 1 */
+						process_a_chance = strtod(match, &next_num);
 						if (strlen(next_num) != 0 ||
-						        (chance_to_send_to_a_receiver < 0 ||
-						         chance_to_send_to_a_receiver > 1)) {
+						        (process_a_chance < 0 ||
+						         process_a_chance > 1)) {
 							free(receivers_args);
 							print_ptrnarg_help(ptrn, ptrnarg, true);
 						}
-						receivers_args->chance_to_send_to_a_receiver = chance_to_send_to_a_receiver;
+						if (g == 3)
+							receivers_args->chance_to_send_to_a_receiver = process_a_chance;
+						else if (g == 5)
+							receivers_args->chance_to_not_send_at_all = process_a_chance;
 						break;
 				}
 			}

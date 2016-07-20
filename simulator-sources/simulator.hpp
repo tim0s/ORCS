@@ -41,6 +41,7 @@ typedef struct {
 typedef struct {
 	int num_receivers;
 	double chance_to_send_to_a_receiver;
+	double chance_to_not_send_at_all;
 } receivers_t;
 
 typedef std::pair<int, int> pair_t;

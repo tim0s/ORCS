@@ -379,13 +379,16 @@ void genptrn_recdbl(int comm_size, int level,
 
 void genptrn_nreceivers_with_chance(int comm_size, int level, int num_receivers,
                                     double chance_to_communicate_with_a_receiver,
+                                    double chance_to_not_communicate_at_all,
                                     ptrn_t *ptrn, bool respect_print_once) {
 	if (level != 0) return;
 
 	print_once(respect_print_once,
-	           "#*** INFO: chance to send to a receiver: %0.1f\%\n"
-	           "#***                number of receivers: %d\n",
+	           "#*** INFO:                     chance to send to a receiver: %0.2f\%\n"
+	           "#***       chance to stay idle if not sending to a receiver: %0.2f\%\n"
+	           "#***                                    number of receivers: %d\n",
 	           chance_to_communicate_with_a_receiver * 100,
+	           chance_to_not_communicate_at_all * 100,
 	           num_receivers);
 
 	/* We cannot have more than comm_size / 2 receivers, because then we will
@@ -439,10 +442,18 @@ void genptrn_nreceivers_with_chance(int comm_size, int level, int num_receivers,
 
 		/* Throw a dice to decide if the src node will communicate with the receiver.
 		 * If the dice value is greater than 'chance_to_communicate_with_a_receiver',
-		 * then select a dst other than receiver, from the non_receivers_bucket. */
+		 * then then throw another dice. If the second dice value is less than
+		 * 'chance_to_not_communicate_at_all' select a dst other than receiver, from
+		 * the non_receivers_bucket. If the second dice is greater than
+		 * 'chance_to_not_communicate_at_all', then this src node is not communicating
+		 * with anyone else in this round. */
 		dice = mtrand.rand();
 		if ((dice > chance_to_communicate_with_a_receiver &&
 		     non_receivers_bucket.size() > 0)) {
+
+			dice = mtrand.rand();
+			if (dice < chance_to_not_communicate_at_all)
+				continue;
 
 			/* Pick a new receiver if receiver == src, only if the size of the bucket
 			 * 'non_receivers_bucket' is greater than 1 (meaning that we have more
@@ -458,7 +469,6 @@ void genptrn_nreceivers_with_chance(int comm_size, int level, int num_receivers,
 				dst = receiver;
 				non_receivers_bucket.erase(non_receivers_bucket.begin() + myrand_pos);
 			}
-
 		}
 
 		ptrn->push_back(std::pair<int, int>(src, dst));
@@ -506,13 +516,9 @@ void genptrn_by_name(ptrn_t *ptrn, char *ptrnname, void *ptrnarg, int comm_size,
 
 		receivers_t receivers_arg = *((receivers_t *)ptrnarg);
 
-		/* If the optional argument chance_to_send_to_a_receiver has been set by the user,
-		 * then use 100% chance to send to the receivers. */
-		if (receivers_arg.chance_to_send_to_a_receiver == -1.0)
-			receivers_arg.chance_to_send_to_a_receiver = 1.0;
-
 		genptrn_nreceivers_with_chance(comm_size, level, receivers_arg.num_receivers,
-		                               receivers_arg.chance_to_send_to_a_receiver, ptrn,
+		                               receivers_arg.chance_to_send_to_a_receiver,
+		                               receivers_arg.chance_to_not_send_at_all, ptrn,
 		                               respect_print_once);
 	}
 	else if (strcmp(ptrnname, "ptrnvsptrn") == 0) {
