@@ -81,6 +81,11 @@
  *        malloc'ed and store the args. At last, the void pointer cmdargs->ptrnarg
  *        has to be pointed to the malloc'ed data.
  *
+ *        Look at the existing simple implementation of the "neighbor" pattern,
+ *        that parses only an integer, or for more advanced implementations with
+ *        regular expressions and multiple arguments (some of them optional), you
+ *        can look at the implementation of the receivers or ptrnvsptrn patterns.
+ *
  *    4. Implement a cleanup function.
  *
  *        Since we allocate some heap memory in step 3, we need to deallocate the
@@ -178,29 +183,35 @@ static void print_ptrnarg_help(IN char *ptrn,
                                IN char *ptrnarg,
                                IN bool error = false) {
 
-	if ((strcmp(ptrn, "neighbor") == 0 ||
-	     strcmp(ptrn, "receivers") == 0))
+	fprintf(stderr, "\n%s: ", error ? "ERROR" : "Usage");
+
+	if (strcmp(ptrn, "neighbor") == 0) {
 		/* Prints an INT Required usage/error message */
-		fprintf(stderr, "\n%s: Pattern '%s' requires an integer ptrnarg that is greater than 0. %s%s%s%s\n",
-		        error ? "ERROR" : "Usage", ptrn,
-		        ptrnarg ? "'" : "",
-		        ptrnarg ? ptrnarg : "",
-		        ptrnarg ? "' " : "",
-		        ptrnarg ? "provided." : "");
-	else if (strcmp(ptrn, "ptrnvsptrn") == 0)
-		fprintf(stderr, "\n%s: Pattern '%s' requires a string ptrnarg in the following format:\n"
-		        "         pattern1:arg2,pattern2:arg2\n"
+		fprintf(stderr, "Pattern '%s' requires an integer ptrnarg that is greater than 0.\n", ptrn);
+	} else if (strcmp(ptrn, "receivers") == 0) {
+		fprintf(stderr, "Pattern '%s' requires a ptrnarg in the following format:\n"
+		        "         <num_receivers>[,<chance_factor>]\n"
 		        "         \n"
-		        "       The args (arg1 and/or arg2) are optional, and should only be provided\n"
-		        "       if the used patterns need an argument.\n"
-		        "       All of the available patterns except 'ptrnvsptrn' can be used for either\n"
-		        "       pattern1 or pattern2.\n"
-		        "%s%s%s%s\n",
-		        error ? "ERROR" : "Usage", ptrn,
-		        ptrnarg ? "\nPattern argument '" : "",
-		        ptrnarg ? ptrnarg : "",
-		        ptrnarg ? "' " : "",
-		        ptrnarg ? "provided." : "");
+		        "       The 'num_receivers' arg is a mandatory integer number greater than zero, and defines the number\n"
+		        "         of receivers that will be used in the experiment.\n"
+		        "       The 'chance_factor' arg is an optional percentage (accepts values between 0.0 and 1.0) and defines\n"
+		        "         a chance that a chosen source node will have to communicate with a receiver in the pattern. If no\n"
+		        "         chance_factor is provided, the chance_factor is set to 1.0, and the chosen source nodes will always\n"
+		        "         communicate with a receiver.\n", ptrn);
+	} else if (strcmp(ptrn, "ptrnvsptrn") == 0) {
+		fprintf(stderr, "Pattern '%s' requires a string ptrnarg in the following format:\n"
+		        "         <pattern1>[:<arg2>],<pattern2>[:<arg2>]\n"
+		        "         \n"
+		        "       The args ('arg1' and/or 'arg2') are optional, and should only be provided if the used patterns\n"
+		        "        need an argument. All of the available patterns except 'ptrnvsptrn' can be used for either\n"
+		        "        'pattern1' or 'pattern2'.\n", ptrn);
+	}
+
+	fprintf(stderr, "%s%s%s%s\n",
+	       ptrnarg ? "\nPattern argument '" : "",
+           ptrnarg ? ptrnarg : "",
+           ptrnarg ? "' " : "",
+           ptrnarg ? "provided." : "");
 
 	if (error)
 		exit(EXIT_FAILURE);
@@ -282,7 +293,7 @@ static void process_ptrnargs(IN char *ptrn,
 		regmatch_t matchedGroups[numGroups];
 		int ret, g, start_pos, end_pos;
 		char *cursor = ptrnarg;
-		char match[MAX_ARG_SIZE], *cur_match;
+		char match[MAX_ARG_SIZE];
 
 		int num_receivers;
 		double chance_to_send_to_a_receiver;
