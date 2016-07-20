@@ -40,7 +40,8 @@ struct next
 
 /* generates a random communication pattern for a communicator of size
  * comm_size */
-void genptrn_rand(int comm_size, int level, ptrn_t *ptrn) {
+void genptrn_rand(int comm_size, int level,
+                  ptrn_t *ptrn, bool respect_print_once) {
 	/* this pattern generator draws two nodes, ensures that they are not the same
 	 * in order to avoid having nodes sending traffic to themselves (wight 0), and
 	 * puts them as communication pairs into the pattern */
@@ -115,7 +116,8 @@ void genptrn_rand(int comm_size, int level, ptrn_t *ptrn) {
 	}
 }
 
-void genptrn_bisect(int comm_size, int level, ptrn_t *ptrn) {
+void genptrn_bisect(int comm_size, int level,
+                    ptrn_t *ptrn, bool respect_print_once) {
 	/* Generates a bisection bandwith testing pattern */
 	if (level != 0) return;
 
@@ -124,14 +126,16 @@ void genptrn_bisect(int comm_size, int level, ptrn_t *ptrn) {
 	}
 }
 
-void genptrn_null(int comm_size, int level, ptrn_t *ptrn) {
+void genptrn_null(int comm_size, int level,
+                  ptrn_t *ptrn, bool respect_print_once) {
 	/* Generates a bisection bandwith testing pattern */
 	if (level != 0) return;
 	ptrn->clear();
 }
 
 
-void genptrn_bisect_fb_sym(int comm_size, int level, ptrn_t *ptrn) {
+void genptrn_bisect_fb_sym(int comm_size, int level,
+                           ptrn_t *ptrn, bool respect_print_once) {
 	/* Generates a bisection bandwith testing pattern */
 	if (level != 0) return;
 
@@ -145,7 +149,8 @@ void genptrn_bisect_fb_sym(int comm_size, int level, ptrn_t *ptrn) {
 /* generates a binomial tree communication pattern for a communicator of
  * size comm_size, level indicates the level of the algorithm
  * (0..log_2(comm_size)-1) */
-void genptrn_tree(int comm_size, int level, ptrn_t *ptrn) {
+void genptrn_tree(int comm_size, int level,
+                  ptrn_t *ptrn, bool respect_print_once) {
 	int dist = 1<<level;
 
 	for(int i = 0; i < dist; i++) {
@@ -156,25 +161,11 @@ void genptrn_tree(int comm_size, int level, ptrn_t *ptrn) {
 	}
 }
 
-/* generates a n-ary binomial tree communication pattern for a communicator of
- * size comm_size, level indicates the level of the algorithm
- * (0..log_n(comm_size)-1) */
-void genptrn_ntree(int comm_size, int level, ptrn_t *ptrn) {
-	int dist = 1<<level;
-
-	/*
-	for(int i = 0; i < dist; i++) {
-		if(i+dist >= comm_size) break;
-		pair_t pair(i,i+dist);
-
-		ptrn->push_back(pair);
-	}*/
-}
-
 /* generates a bruck-style communication pattern for a communicator of
  * size comm_size, level indicates the level of the algorithm
  * (0..log_2(comm_size)-1) */
-void genptrn_bruck(int comm_size, int level, ptrn_t *ptrn) {
+void genptrn_bruck(int comm_size, int level,
+                   ptrn_t *ptrn, bool respect_print_once) {
 	int dist = 1<<level;
 
 	if(dist >= comm_size) return;
@@ -190,7 +181,8 @@ void genptrn_bruck(int comm_size, int level, ptrn_t *ptrn) {
 
 /* generates a gather communication pattern for a communicator of
  * size comm_size */
-void genptrn_gather(int comm_size, int level,  ptrn_t *ptrn) {
+void genptrn_gather(int comm_size, int level,
+                    ptrn_t *ptrn, bool respect_print_once) {
 	if(level != 0) return;
 	for(int i = 1; i < comm_size; i++) {
 		pair_t pair(i,0);
@@ -201,7 +193,8 @@ void genptrn_gather(int comm_size, int level,  ptrn_t *ptrn) {
 
 /* generates a scatter communication pattern for a communicator of
  * size comm_size */
-void genptrn_scatter(int comm_size, int level,  ptrn_t *ptrn) {
+void genptrn_scatter(int comm_size, int level,
+                     ptrn_t *ptrn, bool respect_print_once) {
 	if(level != 0) return;
 	for(int i = 1; i < comm_size; i++) {
 		pair_t pair(0,i);
@@ -217,7 +210,8 @@ static inline void coords_to_node(int xmax, int ymax, int x, int y, int *node) {
 	if(y < 0) y = ymax+y; if(y>=ymax) y = y%ymax;
 	*node = y*xmax + x;
 }
-void genptrn_neighbor2d(int comm_size, int level, ptrn_t *ptrn) {
+void genptrn_neighbor2d(int comm_size, int level,
+                        ptrn_t *ptrn, bool respect_print_once) {
 
 	if(level > 0) return;
 
@@ -259,7 +253,8 @@ void genptrn_neighbor2d(int comm_size, int level, ptrn_t *ptrn) {
 	}
 }
 
-void genptrn_nneighbor(int nprocs, int level, int neighbors, ptrn_t *ptrn) {
+void genptrn_nneighbor(int nprocs, int level, int neighbors,
+                       ptrn_t *ptrn, bool respect_print_once) {
 
 	if(level > 0) return;
 
@@ -344,7 +339,8 @@ void genptrn_nneighbor(int nprocs, int level, int neighbors, ptrn_t *ptrn) {
 
 /* generates a ring communication pattern for a communicator of
  * size comm_size */
-void genptrn_ring(int comm_size, int level, ptrn_t *ptrn) {
+void genptrn_ring(int comm_size, int level,
+                  ptrn_t *ptrn, bool respect_print_once) {
 	if(level >= comm_size) return;
 
 	pair_t pair(level,(level+1)%comm_size);
@@ -354,7 +350,8 @@ void genptrn_ring(int comm_size, int level, ptrn_t *ptrn) {
 
 /* generates a recursive doubling communication pattern for a
  * communicator of size comm_size */
-void genptrn_recdbl(int comm_size, int level, ptrn_t *ptrn) {
+void genptrn_recdbl(int comm_size, int level,
+                    ptrn_t *ptrn, bool respect_print_once) {
 	int dist = 1<<level;
 
 	int l = (int)floor(log((double)comm_size)/log(2.0));
@@ -382,10 +379,11 @@ void genptrn_recdbl(int comm_size, int level, ptrn_t *ptrn) {
 
 void genptrn_nreceivers_with_chance(int comm_size, int level, int num_receivers,
                                     double chance_to_communicate_with_a_receiver,
-                                    ptrn_t *ptrn) {
+                                    ptrn_t *ptrn, bool respect_print_once) {
 	if (level != 0) return;
 
-	print_once("#*** INFO: chance to send to a receiver: %0.1f\%\n"
+	print_once(respect_print_once,
+	           "#*** INFO: chance to send to a receiver: %0.1f\%\n"
 	           "#***                number of receivers: %d\n",
 	           chance_to_communicate_with_a_receiver * 100,
 	           num_receivers);
@@ -395,7 +393,8 @@ void genptrn_nreceivers_with_chance(int comm_size, int level, int num_receivers,
 	 * sender sends traffic to only one receiver at a time. */
 	if (num_receivers > floor((double)comm_size / 2)) {
 		num_receivers = floor((double)comm_size / 2);
-		print_once("#*** WARN: cannot have more than commsize/2 receivers.\n"
+		print_once(respect_print_once,
+		           "#*** WARN: cannot have more than commsize/2 receivers.\n"
 		           "     Correcting number of receivers to %d (commsize: %d)\n",
 		           num_receivers, comm_size);
 	}
@@ -485,23 +484,24 @@ void printptrn(ptrn_t *ptrn, namelist_t *namelist) {
 	printf("=================\n");
 }
 
-void genptrn_by_name(ptrn_t *ptrn, char *ptrnname, void *ptrnarg, int comm_size, int partcomm_size, int level) {
+void genptrn_by_name(ptrn_t *ptrn, char *ptrnname, void *ptrnarg, int comm_size,
+                     int partcomm_size, int level, bool respect_print_once) {
 	
 	//printf("Name: %s\n Size: %i\n Level: %i\n", ptrnname, comm_size, level);
 	
 	ptrn->clear();
-	if (strcmp(ptrnname, "rand") == 0) { genptrn_rand(comm_size, level, ptrn); }
-	else if (strcmp(ptrnname, "bisect") == 0) { genptrn_bisect(comm_size, level, ptrn); }
-	else if (strcmp(ptrnname, "null") == 0) { genptrn_null(comm_size, level, ptrn); }
-	else if (strcmp(ptrnname, "bisect_fb_sym") == 0) { genptrn_bisect_fb_sym(comm_size, level, ptrn); }
-	else if (strcmp(ptrnname, "tree") == 0) { genptrn_tree(comm_size, level, ptrn); }
-	else if (strcmp(ptrnname, "bruck") == 0) { genptrn_bruck(comm_size, level, ptrn); }
-	else if (strcmp(ptrnname, "gather") == 0) { genptrn_gather(comm_size, level, ptrn); }
-	else if (strcmp(ptrnname, "scatter") == 0) { genptrn_scatter(comm_size, level, ptrn); }
-	else if (strcmp(ptrnname, "neighbor2d") ==0) { genptrn_neighbor2d(comm_size, level, ptrn); }
-	else if (strcmp(ptrnname, "ring") == 0) { genptrn_ring(comm_size, level, ptrn); }
-	else if (strcmp(ptrnname, "recdbl") == 0) { genptrn_recdbl(comm_size, level, ptrn); }
-	else if (strcmp(ptrnname, "neighbor") == 0) { genptrn_nneighbor(comm_size, level, *((int*)ptrnarg), ptrn); }
+	if (strcmp(ptrnname, "rand") == 0) { genptrn_rand(comm_size, level, ptrn, respect_print_once); }
+	else if (strcmp(ptrnname, "bisect") == 0) { genptrn_bisect(comm_size, level, ptrn, respect_print_once); }
+	else if (strcmp(ptrnname, "null") == 0) { genptrn_null(comm_size, level, ptrn, respect_print_once); }
+	else if (strcmp(ptrnname, "bisect_fb_sym") == 0) { genptrn_bisect_fb_sym(comm_size, level, ptrn, respect_print_once); }
+	else if (strcmp(ptrnname, "tree") == 0) { genptrn_tree(comm_size, level, ptrn, respect_print_once); }
+	else if (strcmp(ptrnname, "bruck") == 0) { genptrn_bruck(comm_size, level, ptrn, respect_print_once); }
+	else if (strcmp(ptrnname, "gather") == 0) { genptrn_gather(comm_size, level, ptrn, respect_print_once); }
+	else if (strcmp(ptrnname, "scatter") == 0) { genptrn_scatter(comm_size, level, ptrn, respect_print_once); }
+	else if (strcmp(ptrnname, "neighbor2d") ==0) { genptrn_neighbor2d(comm_size, level, ptrn, respect_print_once); }
+	else if (strcmp(ptrnname, "ring") == 0) { genptrn_ring(comm_size, level, ptrn, respect_print_once); }
+	else if (strcmp(ptrnname, "recdbl") == 0) { genptrn_recdbl(comm_size, level, ptrn, respect_print_once); }
+	else if (strcmp(ptrnname, "neighbor") == 0) { genptrn_nneighbor(comm_size, level, *((int*)ptrnarg), ptrn, respect_print_once); }
 	else if (strcmp(ptrnname, "receivers") == 0) {
 
 		receivers_t receivers_arg = *((receivers_t *)ptrnarg);
@@ -510,19 +510,27 @@ void genptrn_by_name(ptrn_t *ptrn, char *ptrnname, void *ptrnarg, int comm_size,
 		 * then use 100% chance to send to the receivers. */
 		if (receivers_arg.chance_to_send_to_a_receiver == -1.0)
 			receivers_arg.chance_to_send_to_a_receiver = 1.0;
-			//genptrn_nreceivers(comm_size, level, receivers_arg.num_receivers, ptrn);
 
 		genptrn_nreceivers_with_chance(comm_size, level, receivers_arg.num_receivers,
-		                               receivers_arg.chance_to_send_to_a_receiver, ptrn);
+		                               receivers_arg.chance_to_send_to_a_receiver, ptrn,
+		                               respect_print_once);
 	}
 	else if (strcmp(ptrnname, "ptrnvsptrn") == 0) {
 
+		/* When we use the print_once function in the different patterns, if ptrn1 == ptrn2 we want
+		 * to print the messages that are to be printed once both for ptrn1 and ptrn2. But since the
+		 * print_once function is using a static variable to determine if the content has already
+		 * been printed once, we need to have a way to say if we want to respect the print_once principle.
+		 * That's why we use the static do_not_respect_print_once variable. */
+		static bool do_not_respect_print_once = true;
 		static int level_ptrn2 = 0;
 		ptrnvsptrn_t ptrnvsptrn = *((ptrnvsptrn_t *)ptrnarg);
 		ptrn_t ptrn1, ptrn2;
 
 		genptrn_by_name(&ptrn1, ptrnvsptrn.ptrn1, ptrnvsptrn.ptrnarg1, partcomm_size, 0, level);
-		genptrn_by_name(&ptrn2, ptrnvsptrn.ptrn2, ptrnvsptrn.ptrnarg2, comm_size - partcomm_size, 0, level_ptrn2);
+		genptrn_by_name(&ptrn2, ptrnvsptrn.ptrn2, ptrnvsptrn.ptrnarg2, comm_size - partcomm_size, 0, level_ptrn2, !do_not_respect_print_once);
+
+		do_not_respect_print_once = false;
 
 		if ((ptrn2.size() == 0) && (ptrn1.size()!= 0)) {
 			level_ptrn2 = 0;

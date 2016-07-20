@@ -1,6 +1,7 @@
 #ifndef SIMULATOR_HPP
 #define SIMULATOR_HPP
 
+#include <stdarg.h>
 #include <vector>
 #include <map>
 #include <utility>
@@ -8,16 +9,6 @@
 #include <assert.h>
 #include "cmdline.h"
 #include "MersenneTwister.h"
-
-/* Why the do {..} while(0_ is used: http://stackoverflow.com/a/257425/1275161 */
-#define print_once(fmt, ...)              \
-	do  {                                 \
-		static bool __print_once = false; \
-        if(!__print_once) {               \
-			__print_once = true;          \
-              printf(fmt, ##__VA_ARGS__); \
-		}                                 \
-	} while(0);
 
 #define RUN 100
 #define ACCOUNT 101
@@ -127,6 +118,26 @@ void get_max_congestion(uroute_t *route, cable_cong_map_t *cable_cong, int *weig
 void tag_edges(Agraph_t *mygraph);
 void allreduce_contig_int_map(std::map<int,int> *map);
 void write_graph_with_congestions();
+
+/* An inline function that is used in more than one files, has to
+ * be placed in a header file.*/
+inline void print_once(bool respect_print_once, const char *fmt, ...) {
+	static bool __printed_once = false;
+	va_list list;
+	va_start(list, fmt);
+
+	if (respect_print_once) {
+		if (!__printed_once) {
+			__printed_once = true;
+
+			vprintf(fmt, list);
+		}
+	} else {
+		vprintf(fmt, list);
+	}
+
+	va_end(list);
+}
 
 /* globals */
 #ifndef MYGLOBALS
