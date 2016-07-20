@@ -181,7 +181,8 @@ int check_if_ptrn_available_for_ptrnvsptrn(const char *ptrn) {
  */
 static void print_ptrnarg_help(IN char *ptrn,
                                IN char *ptrnarg,
-                               IN bool error = false) {
+                               IN bool error = false,
+                               IN bool terminate_prog = true) {
 
 	fprintf(stderr, "\n%s: ", error ? "ERROR" : "Usage");
 
@@ -200,7 +201,7 @@ static void print_ptrnarg_help(IN char *ptrn,
 		        "         communicate with a receiver.\n", ptrn);
 	} else if (strcmp(ptrn, "ptrnvsptrn") == 0) {
 		fprintf(stderr, "Pattern '%s' requires a string ptrnarg in the following format:\n"
-		        "         <pattern1>[:<arg2>],<pattern2>[:<arg2>]\n"
+		        "         <pattern1>[:<arg2>]::<pattern2>[:<arg2>]\n"
 		        "         \n"
 		        "       The args ('arg1' and/or 'arg2') are optional, and should only be provided if the used patterns\n"
 		        "        need an argument. All of the available patterns except 'ptrnvsptrn' can be used for either\n"
@@ -213,10 +214,12 @@ static void print_ptrnarg_help(IN char *ptrn,
            ptrnarg ? "' " : "",
            ptrnarg ? "provided." : "");
 
-	if (error)
-		exit(EXIT_FAILURE);
-	else
-		exit(EXIT_SUCCESS);
+	if (terminate_prog) {
+		if (error)
+			exit(EXIT_FAILURE);
+		else
+			exit(EXIT_SUCCESS);
+	}
 }
 
 /**
@@ -371,6 +374,8 @@ static void process_ptrnargs(IN char *ptrn,
 			}
 		}
 
+		regfree(&regex);
+
 		cmdargs->ptrnarg = (void *)receivers_args;
 
 	} else if (strcmp(ptrn, "ptrnvsptrn") == 0) {
@@ -392,7 +397,7 @@ static void process_ptrnargs(IN char *ptrn,
 		                           * groups (I couldn't find how to exclude a match from group in C... ?: is
 		                           * not working) that's why we choose numGroups = 7; */
 		regmatch_t matchedGroups[numGroups]; /* Contains the matches found */
-		int ret, g, start_pos, end_pos;
+		int ret, i, g, start_pos, end_pos;
 		char *cursor = ptrnarg;
 
 		char complete_match[MAX_PTRNVSPTRN_ARG_SIZE], *cur_match;
@@ -403,20 +408,20 @@ static void process_ptrnargs(IN char *ptrn,
 		memset(complete_match, 0, sizeof(complete_match));
 
 		/* Compile the regex first */
-		/* 1: ^                     <- Matches beginning of the line."
-		 * 2: ([^:,[:blank:]]+)     <- Matches one or more non-space, non-colon, non-comma characters"
-		 * 3: (:([^:,[:blank:]]+))? <- An optional string follows that starts with a colon, and follows the rules of 2 (right above)
-		 * 4:,                      <- A comma must follow
-		 * 5:                       <- Steps 2,3 are repeated
-		 * 6:$                      <- until the end of line is reached.
+		/* 1) ^                     <- Matches beginning of the line."
+		 * 2) ([^:[:blank:]]+)      <- Matches one or more non-space, non-colon characters"
+		 * 3) (:([^:[:blank:]]+))?  <- An optional string follows that starts with a colon, and follows the rules of 2 (right above)
+		 * 4) ::                    <- A double colon must follow (this is the separator of the two patterns
+		 * 5)                       <- Steps 2,3 are repeated
+		 * 6) $                     <- until the end of line is reached.
 		 *
 		 * This regex will match strings like the following and nothing else:
-		 *     ptrn1:arg1,ptrn2:arg2
-		 *     ptrn1:arg1,ptrn2
-		 *     ptrn1,ptrn2:arg2
-		 *     ptrn1,ptrn2
+		 *     ptrn1:arg1::ptrn2:arg2
+		 *     ptrn1:arg1::ptrn2
+		 *     ptrn1::ptrn2:arg2
+		 *     ptrn1::ptrn2
 		 */
-		ret = regcomp(&regex, "^([^:,[:blank:]]+)(:([^:,[:blank:]]+))?,([^:,[:blank:]]+)(:([^:,[:blank:]]+))?$", REG_EXTENDED);
+		ret = regcomp(&regex, "^([^:[:blank:]]+)(:([^:[:blank:]]+))?::([^:[:blank:]]+)(:([^:[:blank:]]+))?$", REG_EXTENDED);
 		if (ret) {
 			fprintf(stderr, "Could not compile regex\n");
 			exit(EXIT_FAILURE);
@@ -445,7 +450,7 @@ static void process_ptrnargs(IN char *ptrn,
 			start_pos = matchedGroups[g].rm_so;
 			end_pos = matchedGroups[g].rm_eo;
 
-			//printf("start: %d, finish: %d, %d, %d\n", start_pos, end_pos,
+			//printf("start: %d, finish: %d, rm_so: %d, rm_eo: %d\n", start_pos, end_pos,
 			//	   matchedGroups[g].rm_so, matchedGroups[g].rm_eo);
 
 			if (g == 0) {
@@ -505,9 +510,32 @@ static void process_ptrnargs(IN char *ptrn,
 		regfree(&regex);
 
 		/* Validate that the user has provided an known pattern */
-		if ((check_if_ptrn_available_for_ptrnvsptrn(ptrnvsptrn->ptrn1) == -1 ||
-		     check_if_ptrn_available_for_ptrnvsptrn(ptrnvsptrn->ptrn2) == -1))
-			print_ptrnarg_help(ptrn, ptrnarg, true);
+		bool unknown_ptrn1 = false, unknown_ptrn2 = false;
+		if (check_if_ptrn_available_for_ptrnvsptrn(ptrnvsptrn->ptrn1) == -1)
+			unknown_ptrn1 = true;
+		if (check_if_ptrn_available_for_ptrnvsptrn(ptrnvsptrn->ptrn2) == -1)
+			unknown_ptrn2 = true;
+
+		if (unknown_ptrn1 || unknown_ptrn2) {
+			print_ptrnarg_help(ptrn, ptrnarg, true, false);
+
+			printf("\n"
+			       "-------------------------------\n"
+			       "Unknown pattern%s: %s%s%s\n"
+			       "-------------------------------\n",
+			       unknown_ptrn1 && unknown_ptrn2 ? "s" : "",
+			       unknown_ptrn1 ? ptrnvsptrn->ptrn1 : "",
+			       unknown_ptrn1 && unknown_ptrn2 ? ", " : "",
+			       unknown_ptrn2 ? ptrnvsptrn->ptrn2 : "");
+
+			/* Print available patterns */
+			printf("\nAvailable patterns are:\n");
+			for (i = 0; cmdline_parser_ptrn_values[i]; i++) {
+				if (strcmp(cmdline_parser_ptrn_values[i], "ptrnvsptrn") != 0)
+					printf("     %s\n", cmdline_parser_ptrn_values[i]);
+			}
+			exit(EXIT_FAILURE);
+		}
 
 		/* Use some temporary cmdargs variables, and call the function process_ptrnargs
 		 * recursively for each of the provided patterns. The function process_ptrnargs
@@ -528,6 +556,7 @@ static void process_ptrnargs(IN char *ptrn,
 		ptrnvsptrn->ptrnarg2 = cmdargs_ptrn2.ptrnarg;
 
 		cmdargs->ptrnarg = (void *)ptrnvsptrn;
+
 	} else {
 
 		/* If the pattern cannot accept a ptrnarg, just set the cmdargs->ptrnarg to NULL */
