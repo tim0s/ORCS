@@ -174,7 +174,7 @@ write_start_ibsim() {
 	echo "	exit -1"  >> start_ibsim.sh
 	echo "fi" >> start_ibsim.sh
 	echo "export LD_PRELOAD=$UMAD2SIMDIR/libumad2sim.so" >> start_ibsim.sh
-        echo "ibsim -s -N 49152 -S 49152 -P 49152 \"\$1\"" >> start_ibsim.sh
+        echo "ibsim -s -N 49152 -S 49152 -P 200000 \"\$1\"" >> start_ibsim.sh
 	chmod u+x start_ibsim.sh
 }
 

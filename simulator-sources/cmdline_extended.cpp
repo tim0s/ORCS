@@ -81,6 +81,11 @@
  *        malloc'ed and store the args. At last, the void pointer cmdargs->ptrnarg
  *        has to be pointed to the malloc'ed data.
  *
+ *        Look at the existing simple implementation of the "neighbor" pattern,
+ *        that parses only an integer, or for more advanced implementations with
+ *        regular expressions and multiple arguments (some of them optional), you
+ *        can look at the implementation of the receivers or ptrnvsptrn patterns.
+ *
  *    4. Implement a cleanup function.
  *
  *        Since we allocate some heap memory in step 3, we need to deallocate the
@@ -176,36 +181,50 @@ int check_if_ptrn_available_for_ptrnvsptrn(const char *ptrn) {
  */
 static void print_ptrnarg_help(IN char *ptrn,
                                IN char *ptrnarg,
-                               IN bool error = false) {
+                               IN bool error = false,
+                               IN bool terminate_prog = true) {
 
-	if ((strcmp(ptrn, "neighbor") == 0 ||
-	     strcmp(ptrn, "receivers") == 0))
+	fprintf(stderr, "\n%s: ", error ? "ERROR" : "Usage");
+
+	if (strcmp(ptrn, "neighbor") == 0) {
 		/* Prints an INT Required usage/error message */
-		fprintf(stderr, "\n%s: Pattern '%s' requires an integer ptrnarg that is greater than 0. %s%s%s%s\n",
-		        error ? "ERROR" : "Usage", ptrn,
-		        ptrnarg ? "'" : "",
-		        ptrnarg ? ptrnarg : "",
-		        ptrnarg ? "' " : "",
-		        ptrnarg ? "provided." : "");
-	else if (strcmp(ptrn, "ptrnvsptrn") == 0)
-		fprintf(stderr, "\n%s: Pattern '%s' requires a string ptrnarg in the following format:\n"
-		        "         pattern1:arg2,pattern2:arg2\n"
+		fprintf(stderr, "Pattern '%s' requires an integer ptrnarg that is greater than 0.\n", ptrn);
+	} else if (strcmp(ptrn, "receivers") == 0) {
+		fprintf(stderr, "Pattern '%s' requires a ptrnarg in the following format:\n"
+		        "         <num_receivers>[,<chance_factor_1>[,<chance_factor_2>]]\n"
 		        "         \n"
-		        "       The args (arg1 and/or arg2) are optional, and should only be provided\n"
-		        "       if the used patterns need an argument.\n"
-		        "       All of the available patterns except 'ptrnvsptrn' can be used for either\n"
-		        "       pattern1 or pattern2.\n"
-		        "%s%s%s%s\n",
-		        error ? "ERROR" : "Usage", ptrn,
-		        ptrnarg ? "\nPattern argument '" : "",
-		        ptrnarg ? ptrnarg : "",
-		        ptrnarg ? "' " : "",
-		        ptrnarg ? "provided." : "");
+		        "       The 'num_receivers' arg is a mandatory integer number greater than zero, and defines the number\n"
+		        "         of receivers that will be used in the experiment.\n"
+		        "       The 'chance_factor_1' arg is an optional percentage (accepts values between 0.0 and 1.0) and defines\n"
+		        "         a chance that a chosen source node will have to communicate with a receiver in the pattern. If no\n"
+		        "         chance_factor_1 is provided, the chance_factor_1 is set to 1.0, and the chosen source nodes will\n"
+		        "         always communicate with a receiver.\n"
+		        "       The 'chance_factor_2' arg is another optional percentage (accepts values between 0.0 and 1.0) and\n"
+		        "         defines the chance that if a chosen source node is decided that will not communicate with a\n"
+		        "         receiver (based on chance_factor_1), there is a chance that it will stay idle (i.e. not communicate\n"
+		        "         at all with any other node). If the chance_factor_1 is set to 1.0, the chance_factor_2 will have no\n"
+		        "         effect in the experiment. The chance_factor_2 is set to 0.0 by default, i.e. there are no idle nodes.\n", ptrn);
+	} else if (strcmp(ptrn, "ptrnvsptrn") == 0) {
+		fprintf(stderr, "Pattern '%s' requires a string ptrnarg in the following format:\n"
+		        "         <pattern1>[:<arg2>]::<pattern2>[:<arg2>]\n"
+		        "         \n"
+		        "       The args ('arg1' and/or 'arg2') are optional, and should only be provided if the used patterns\n"
+		        "        need an argument. All of the available patterns except 'ptrnvsptrn' can be used for either\n"
+		        "        'pattern1' or 'pattern2'.\n", ptrn);
+	}
 
-	if (error)
-		exit(EXIT_FAILURE);
-	else
-		exit(EXIT_SUCCESS);
+	fprintf(stderr, "%s%s%s%s\n",
+	       ptrnarg ? "\nPattern argument '" : "",
+           ptrnarg ? ptrnarg : "",
+           ptrnarg ? "' " : "",
+           ptrnarg ? "provided." : "");
+
+	if (terminate_prog) {
+		if (error)
+			exit(EXIT_FAILURE);
+		else
+			exit(EXIT_SUCCESS);
+	}
 }
 
 /**
@@ -216,21 +235,38 @@ static void process_ptrnargs(IN char *ptrn,
                              IN char *ptrnarg,
                              IN OUT cmdargs_t *cmdargs) {
 
+	int max_ptrn_size;
+
+	if (strcmp(ptrn, "ptrnvsptrn") == 0)
+		max_ptrn_size = MAX_PTRNVSPTRN_ARG_SIZE;
+	else
+		max_ptrn_size = MAX_ARG_SIZE;
+
+	/* Ensure that the user is not providing a string larger than what we can handle */
+	if (strlen(ptrnarg) > max_ptrn_size) {
+		fprintf(stderr, "ERROR: The max accepted arg size for ptrn '%s' is %d\n", ptrn, max_ptrn_size);
+		exit(EXIT_FAILURE);
+	}
+
 	/* If the pattern argument is "help", just print the help
-	 * message corresponding to that ptrn and exit. */
+	 * message corresponding to that ptrn and exit.
+	 * TODO: Implement a help message for each one of the patterns, because
+	 *       at the moment if a user calls, for example, the rand pattern with
+	 *       'help' ptrnarg, the simulator will just exit without printing
+	 *       anything.
+	 */
 	if (strcmp(ptrnarg, "help") == 0)
 		print_ptrnarg_help(ptrn, NULL);
 
 	/* If the pattern argument != "help", check which pattern
 	 * we are currently processing, and parse the pattern args
 	 * as necessary */
-	if ((strcmp(ptrn, "neighbor") == 0 ||
-	     strcmp(ptrn, "receivers") == 0)) {
+	if (strcmp(ptrn, "neighbor") == 0) {
 
-		/**
-		 * For neighbor or receivers pattern, the
-		 * pattern argument must be an integer
-		 */
+		/** ****************************************************************
+		 * For the neighbor pattern, the pattern argument must be
+		 * an integer greater than zero.
+		 *******************************************************************/
 
 		char *next_num;
 
@@ -246,13 +282,120 @@ static void process_ptrnargs(IN char *ptrn,
 
 		cmdargs->ptrnarg = (void *)ptrnarg_i;
 
+	} else if (strcmp(ptrn, "receivers") == 0) {
+
+		/** ****************************************************************
+		 * For the receivers pattern, the pattern argument must be a
+		 * string in this format:
+		 *     integer[,double]
+		 *
+		 * That is, a mandatory integer number greater than zero must
+		 * be provided, and an optional percentage that is following
+		 * after a comma, between 0.0 and 1.0 can be provided if the
+		 * user wants to have source nodes sending traffic to the
+		 * receiver based on a chance factor.
+		 *******************************************************************/
+
+		regex_t regex;
+		const int numGroups = 6;
+		regmatch_t matchedGroups[numGroups];
+		int ret, g, start_pos, end_pos;
+		char *cursor = ptrnarg;
+		char match[MAX_ARG_SIZE];
+
+		int num_receivers;
+		double process_a_chance;
+		receivers_t *receivers_args = (receivers_t *)malloc(sizeof(receivers_args));
+		if (receivers_args == NULL)
+			goto exit;
+
+		/* Default -1 indicates that the chance_to_send_to_a_receiver hasn't been provided by the user */
+		receivers_args->chance_to_send_to_a_receiver = 1.0;
+		receivers_args->chance_to_not_send_at_all = 0.0;
+
+		/* Why I use double backslash to escape the 'dot': http://stackoverflow.com/a/18477178/1275161 */
+		ret = regcomp(&regex, "^([[:digit:]]+)(,([-+]?[0-9]*\\.?[0-9]+))?(,([-+]?[0-9]*\\.?[0-9]+))?$", REG_EXTENDED);
+		if (ret) {
+			fprintf(stderr, "Could not compile regex\n");
+			exit(EXIT_FAILURE);
+		}
+
+		ret = regexec(&regex, cursor, numGroups, matchedGroups, 0);
+		if (ret)
+			/* No match, so print the error message and exit */
+			print_ptrnarg_help(ptrn, ptrnarg, true);
+
+		for (g = 0; g < numGroups; g++) {
+
+			if (matchedGroups[g].rm_so == -1)
+				continue;
+
+			start_pos = matchedGroups[g].rm_so;
+			end_pos = matchedGroups[g].rm_eo;
+
+			//printf("start: %d, finish: %d, rm_so: %d, rm_eo: %d\n", start_pos, end_pos,
+			//	   matchedGroups[g].rm_so, matchedGroups[g].rm_eo);
+
+			memset(match, 0, sizeof(match));
+			strncpy(match, cursor + start_pos,
+			        (end_pos - start_pos) < MAX_ARG_SIZE ?
+			            end_pos - start_pos : MAX_ARG_SIZE);
+			match[MAX_ARG_SIZE - 1] = 0;
+
+			//printf("Matching now: %s, cursor: %s\n", match, cursor);
+
+			if (g == 0) {
+				/* Check if the complete matched string is the same as the ptrnarg. */
+				if (strncmp(ptrnarg, match, strlen(match)) != 0) {
+					printf("here: %s, %s, %d\n", ptrnarg, match, strlen(match));
+					/* The complete string provided by the user should match exactly.
+					 * Otherwise print an error message and exit. */
+					print_ptrnarg_help(ptrn, ptrnarg, true);
+				}
+			} else {
+				char *next_num;
+
+				switch(g) {
+					case 1:
+						/* In the first group we must capture an integer */
+						num_receivers = strtoi(match, &next_num, 10);
+						if (strlen(next_num) != 0 || num_receivers < 1) {
+							free(receivers_args);
+							print_ptrnarg_help(ptrn, ptrnarg, true);
+						}
+						receivers_args->num_receivers = num_receivers;
+						break;
+					case 3:
+					case 5:
+						/* In the third and fifth group we must capture a floating
+						 * point number between 0 and 1 */
+						process_a_chance = strtod(match, &next_num);
+						if (strlen(next_num) != 0 ||
+						        (process_a_chance < 0 ||
+						         process_a_chance > 1)) {
+							free(receivers_args);
+							print_ptrnarg_help(ptrn, ptrnarg, true);
+						}
+						if (g == 3)
+							receivers_args->chance_to_send_to_a_receiver = process_a_chance;
+						else if (g == 5)
+							receivers_args->chance_to_not_send_at_all = process_a_chance;
+						break;
+				}
+			}
+		}
+
+		regfree(&regex);
+
+		cmdargs->ptrnarg = (void *)receivers_args;
+
 	} else if (strcmp(ptrn, "ptrnvsptrn") == 0) {
 
-		/**
+		/** ****************************************************************
 		 * For ptrnvsptrn communication the pattern argument
 		 * must be a string of this format:
 		 *	   ptrn1(:arg1)?,ptrn2(:arg2)?
-		 */
+		 *******************************************************************/
 
 		/* For some help with C regex's:
 		 *    https://gist.github.com/ianmackinnon/3294587
@@ -265,38 +408,31 @@ static void process_ptrnargs(IN char *ptrn,
 		                           * groups (I couldn't find how to exclude a match from group in C... ?: is
 		                           * not working) that's why we choose numGroups = 7; */
 		regmatch_t matchedGroups[numGroups]; /* Contains the matches found */
-		int ret, g, i, start_pos, end_pos;
+		int ret, i, g, start_pos, end_pos;
 		char *cursor = ptrnarg;
 
-		const int max_match_size = MAX_ARG_SIZE * 4 + 1;
-		char complete_match[max_match_size], *cur_match;
+		char complete_match[MAX_PTRNVSPTRN_ARG_SIZE], *cur_match;
 		ptrnvsptrn_t *ptrnvsptrn = (ptrnvsptrn_t *)calloc(1, sizeof(*ptrnvsptrn));	/* Contains the extracted data. */
 		if (ptrnvsptrn == NULL)
 			goto exit;
 
 		memset(complete_match, 0, sizeof(complete_match));
 
-		/* Ensure that the user is not providing a string larger than what we can handle */
-		if (strlen(ptrnarg) > max_match_size) {
-			fprintf(stderr, "ERROR: The max accepted arg size is %d\n", max_match_size);
-			exit(EXIT_FAILURE);
-		}
-
 		/* Compile the regex first */
-		/* 1: ^                     <- Matches beginning of the line."
-		 * 2: ([^:,[:blank:]]+)     <- Matches one or more non-space, non-colon, non-comma characters"
-		 * 3: (:([^:,[:blank:]]+))? <- An optional string follows that starts with a colon, and follows the rules of 2 (right above)
-		 * 4:,                      <- A comma must follow
-		 * 5:                       <- Steps 2,3 are repeated
-		 * 6:$                      <- until the end of line is reached.
+		/* 1) ^                     <- Matches beginning of the line."
+		 * 2) ([^:[:blank:]]+)      <- Matches one or more non-space, non-colon characters"
+		 * 3) (:([^:[:blank:]]+))?  <- An optional string follows that starts with a colon, and follows the rules of 2 (right above)
+		 * 4) ::                    <- A double colon must follow (this is the separator of the two patterns
+		 * 5)                       <- Steps 2,3 are repeated
+		 * 6) $                     <- until the end of line is reached.
 		 *
 		 * This regex will match strings like the following and nothing else:
-		 *     ptrn1:arg1,ptrn2:arg2
-		 *     ptrn1:arg1,ptrn2
-		 *     ptrn1,ptrn2:arg2
-		 *     ptrn1,ptrn2
+		 *     ptrn1:arg1::ptrn2:arg2
+		 *     ptrn1:arg1::ptrn2
+		 *     ptrn1::ptrn2:arg2
+		 *     ptrn1::ptrn2
 		 */
-		ret = regcomp(&regex, "^([^:,[:blank:]]+)(:([^:,[:blank:]]+))?,([^:,[:blank:]]+)(:([^:,[:blank:]]+))?$", REG_EXTENDED);
+		ret = regcomp(&regex, "^([^:[:blank:]]+)(:([^:[:blank:]]+))?::([^:[:blank:]]+)(:([^:[:blank:]]+))?$", REG_EXTENDED);
 		if (ret) {
 			fprintf(stderr, "Could not compile regex\n");
 			exit(EXIT_FAILURE);
@@ -325,7 +461,7 @@ static void process_ptrnargs(IN char *ptrn,
 			start_pos = matchedGroups[g].rm_so;
 			end_pos = matchedGroups[g].rm_eo;
 
-			//printf("start: %d, finish: %d, %d, %d\n", start_pos, end_pos,
+			//printf("start: %d, finish: %d, rm_so: %d, rm_eo: %d\n", start_pos, end_pos,
 			//	   matchedGroups[g].rm_so, matchedGroups[g].rm_eo);
 
 			if (g == 0) {
@@ -333,15 +469,15 @@ static void process_ptrnargs(IN char *ptrn,
 				 * Copy the complete matched string in the complete_match array.
 				 * Perform some bound checks. */
 				strncpy(complete_match, cursor,
-				        (end_pos - start_pos) < max_match_size ?
-				            end_pos - start_pos : max_match_size);
+				        (end_pos - start_pos) < MAX_PTRNVSPTRN_ARG_SIZE ?
+				            end_pos - start_pos : MAX_PTRNVSPTRN_ARG_SIZE);
+				complete_match[MAX_PTRNVSPTRN_ARG_SIZE - 1] = 0;
 
 				/* Check if the complete matched string is the same as the ptrnarg. */
 				if (strncmp(ptrnarg, complete_match, strlen(complete_match)) != 0) {
 					printf("here: %s, %s, %d\n", ptrnarg, complete_match, strlen(complete_match));
 					/* The complete string provided by the user should match exactly.
-					 * Otherwise print an error message and exit.
-					 */
+					 * Otherwise print an error message and exit. */
 					print_ptrnarg_help(ptrn, ptrnarg, true);
 				}
 
@@ -369,10 +505,12 @@ static void process_ptrnargs(IN char *ptrn,
 
 				/* Copy the matched group strings in the individual_match array.
 				 * Perform some bound checks. */
-				if (cur_match != NULL)
+				if (cur_match != NULL) {
 					strncpy(cur_match, cursor + start_pos,
-					        (end_pos - start_pos) < MAX_ARG_SIZE - start_pos ?
-					            end_pos - start_pos : MAX_ARG_SIZE - start_pos);
+					        (end_pos - start_pos) < MAX_ARG_SIZE ?
+					            end_pos - start_pos : MAX_ARG_SIZE);
+					cur_match[MAX_ARG_SIZE - 1] = 0;
+				}
 			}
 
 			//printf ("Matched in group %d: '%.*s' (bytes %d:%d)\n", g,
@@ -383,9 +521,32 @@ static void process_ptrnargs(IN char *ptrn,
 		regfree(&regex);
 
 		/* Validate that the user has provided an known pattern */
-		if ((check_if_ptrn_available_for_ptrnvsptrn(ptrnvsptrn->ptrn1) == -1 ||
-		     check_if_ptrn_available_for_ptrnvsptrn(ptrnvsptrn->ptrn2) == -1))
-			print_ptrnarg_help(ptrn, ptrnarg, true);
+		bool unknown_ptrn1 = false, unknown_ptrn2 = false;
+		if (check_if_ptrn_available_for_ptrnvsptrn(ptrnvsptrn->ptrn1) == -1)
+			unknown_ptrn1 = true;
+		if (check_if_ptrn_available_for_ptrnvsptrn(ptrnvsptrn->ptrn2) == -1)
+			unknown_ptrn2 = true;
+
+		if (unknown_ptrn1 || unknown_ptrn2) {
+			print_ptrnarg_help(ptrn, ptrnarg, true, false);
+
+			printf("\n"
+			       "-------------------------------\n"
+			       "Unknown pattern%s: %s%s%s\n"
+			       "-------------------------------\n",
+			       unknown_ptrn1 && unknown_ptrn2 ? "s" : "",
+			       unknown_ptrn1 ? ptrnvsptrn->ptrn1 : "",
+			       unknown_ptrn1 && unknown_ptrn2 ? ", " : "",
+			       unknown_ptrn2 ? ptrnvsptrn->ptrn2 : "");
+
+			/* Print available patterns */
+			printf("\nAvailable patterns are:\n");
+			for (i = 0; cmdline_parser_ptrn_values[i]; i++) {
+				if (strcmp(cmdline_parser_ptrn_values[i], "ptrnvsptrn") != 0)
+					printf("     %s\n", cmdline_parser_ptrn_values[i]);
+			}
+			exit(EXIT_FAILURE);
+		}
 
 		/* Use some temporary cmdargs variables, and call the function process_ptrnargs
 		 * recursively for each of the provided patterns. The function process_ptrnargs
@@ -406,6 +567,11 @@ static void process_ptrnargs(IN char *ptrn,
 		ptrnvsptrn->ptrnarg2 = cmdargs_ptrn2.ptrnarg;
 
 		cmdargs->ptrnarg = (void *)ptrnvsptrn;
+
+	} else {
+
+		/* If the pattern cannot accept a ptrnarg, just set the cmdargs->ptrnarg to NULL */
+		cmdargs->ptrnarg = NULL;
 	}
 
 	return;
@@ -425,8 +591,6 @@ void perform_sanity_checks_in_args(IN OUT cmdargs_t *cmdargs) {
 	char *ptrn = cmdargs->args_info.ptrn_arg;
 	char *ptrnarg = cmdargs->args_info.ptrnarg_arg;
 
-	cmdargs->ptrnarg = NULL;
-
 	/* First check the pattern name, and if it needs a mandatory
 	 * pattern argument that hasn't been provided, warn and exit. */
 	if ((strcmp(ptrn, "neighbor") == 0 ||
@@ -437,7 +601,8 @@ void perform_sanity_checks_in_args(IN OUT cmdargs_t *cmdargs) {
 
 	/* Ensure that if a pattern argument is provided, it has been
 	 * provided in the correct format/type needed by the chosen pattern */
-	process_ptrnargs(ptrn, ptrnarg, cmdargs);
+	if (ptrnarg != NULL)
+		process_ptrnargs(ptrn, ptrnarg, cmdargs);
 }
 
 /**

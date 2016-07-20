@@ -1,6 +1,7 @@
 #ifndef SIMULATOR_HPP
 #define SIMULATOR_HPP
 
+#include <stdarg.h>
 #include <vector>
 #include <map>
 #include <utility>
@@ -12,7 +13,10 @@
 #define RUN 100
 #define ACCOUNT 101
 #define PARSE_GUID_BUFLEN  256
-#define MAX_ARG_SIZE 80
+#define MAX_ARG_SIZE 256  /* Defines the maximum ptrnarg size */
+#define MAX_PTRNVSPTRN_ARG_SIZE (MAX_ARG_SIZE * 4 + 1) /* Because in the ptrnvsptrn we need to pass 4 args, have
+                                                        * a separate definition for the max ptrnvsptrn size */
+
 /* IN and OUT are used to indicate if a function's
  * parameter is used as input or output */
 #define IN
@@ -33,6 +37,12 @@ typedef struct {
 	char ptrnargstr2[MAX_ARG_SIZE];  // ptrnarg2 string
 	void *ptrnarg2;                  // ptrnarg2 converted in the expected data type
 } ptrnvsptrn_t;
+
+typedef struct {
+	int num_receivers;
+	double chance_to_send_to_a_receiver;
+	double chance_to_not_send_at_all;
+} receivers_t;
 
 typedef std::pair<int, int> pair_t;
 typedef std::vector<pair_t> ptrn_t;
@@ -109,6 +119,26 @@ void get_max_congestion(uroute_t *route, cable_cong_map_t *cable_cong, int *weig
 void tag_edges(Agraph_t *mygraph);
 void allreduce_contig_int_map(std::map<int,int> *map);
 void write_graph_with_congestions();
+
+/* An inline function that is used in more than one files, has to
+ * be placed in a header file.*/
+inline void print_once(bool respect_print_once, const char *fmt, ...) {
+	static bool __printed_once = false;
+	va_list list;
+	va_start(list, fmt);
+
+	if (respect_print_once) {
+		if (!__printed_once) {
+			__printed_once = true;
+
+			vprintf(fmt, list);
+		}
+	} else {
+		vprintf(fmt, list);
+	}
+
+	va_end(list);
+}
 
 /* globals */
 #ifndef MYGLOBALS
