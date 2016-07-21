@@ -164,8 +164,6 @@ void simulation_dep_max_delay(cmdargs_t *cmdargs, namelist_t *namelist, int vali
 	std::map<int,graph_traits <graph_t>::vertex_descriptor> prevleveldests; // destinations from the previous level
 
 	int level=0;
-	ptrn_t ptrn_at_level_0;
-
 	while (1) {
 		ptrn_t ptrn;
 
@@ -174,10 +172,7 @@ void simulation_dep_max_delay(cmdargs_t *cmdargs, namelist_t *namelist, int vali
 		                level++);
 
 		if (ptrn.size() == 0) break;
-
 		//printf("level: %i\n", level-1);
-		if ((level - 1) == 0)
-			ptrn_at_level_0 = ptrn;
 
 		if ((cmdargs->args_info.printptrn_given) && (myrank== 0)) { printptrn(&ptrn, namelist); }
 
@@ -222,7 +217,11 @@ void simulation_dep_max_delay(cmdargs_t *cmdargs, namelist_t *namelist, int vali
 			graph_traits <graph_t>::vertex_descriptor dest_vertex = add_vertex(graph);
 			put(info, source_vertex, source_vertex_prop);
 			put(info, dest_vertex, dest_vertex_prop);
-			//printf("Adding vertex descriptors: %d, %d\n", source_vertex, dest_vertex);
+			//printf("Connection %d -> %d\n", iter_ptrn->first, iter_ptrn->second);
+			//printf("Adding vertex descriptors: '%d' for src node '%d'\n"
+			//       "                           '%d' for dst node '%d'\n",
+			//       source_vertex, get(info, source_vertex).name,
+			//       dest_vertex, get(info, dest_vertex).name);
 
 			// add this level's destinations destination to prevleveldests
 			thisleveldests.insert(std::pair<int,graph_traits <graph_t>::vertex_descriptor>(iter_ptrn->second,dest_vertex));
@@ -232,7 +231,7 @@ void simulation_dep_max_delay(cmdargs_t *cmdargs, namelist_t *namelist, int vali
 			bool tmp;
 			tie(new_edge, tmp) = add_edge(source_vertex, dest_vertex, graph);
 
-			//printf("put weight %i\n", weight);
+			//printf("Put weight %d\n\n", weight);
 			put(load, new_edge, weight);
 		}
 
@@ -265,18 +264,8 @@ void simulation_dep_max_delay(cmdargs_t *cmdargs, namelist_t *namelist, int vali
 	// TODO: there are cycles if there is cyclic communication in a level :-(
 	{
 		int max=0;
-		for (ptrn_t::iterator iter_ptrn = ptrn_at_level_0.begin(); iter_ptrn != ptrn_at_level_0.end(); iter_ptrn++) {
-			if((iter_ptrn->first >= valid_until) || (iter_ptrn->second >= valid_until)) continue;
+		for (graph_traits <graph_t>::vertex_descriptor v = 0; v < num_vertices(graph); v++) {
 
-			graph_traits <graph_t>::vertex_descriptor cur_vertex;
-			vertex_t cur_vertex_prop;
-			for (graph_traits <graph_t>::vertex_descriptor v = 0; v < num_vertices(graph); v++) {
-				cur_vertex_prop = get(info, v);
-				if ((*iter_ptrn).first == cur_vertex_prop.name) {
-					cur_vertex = v;
-					break;
-				}
-			}
 			/* do a dijkstra along every first communication edge */
 			//std::vector<graph_traits<graph_t>::vertex_descriptor> p(num_vertices(graph));
 			//std::vector<int> d(num_vertices(graph));
@@ -292,14 +281,8 @@ void simulation_dep_max_delay(cmdargs_t *cmdargs, namelist_t *namelist, int vali
 			vert_dist_t m_dist = get(vertex_dist_t(), graph);
 			int dist = 0;
 
-			//printf("num_vertices(graph): %d, m_dist: %d, dist %d\n",
-			//       num_vertices(graph), m_dist, dist);
-			//printf("src: %d, dst: %d, WRONG: %d, CORRECT: %d\n",
-			//       iter_ptrn->first, iter_ptrn->second,
-			//       get(info, (*iter_ptrn).first).name, cur_vertex_prop.name);
 			bfs_edge_visitor <vert_dist_t, ed_load_t>vis(m_dist, load, dist);
-			//breadth_first_search(graph, (*iter_ptrn).first, visitor(vis));
-			breadth_first_search(graph, cur_vertex, visitor(vis));
+			breadth_first_search(graph, v, visitor(vis));
 
 			// loop over all vertices and find biggest time
 			graph_traits<graph_t>::vertex_iterator viter, viter_end;
