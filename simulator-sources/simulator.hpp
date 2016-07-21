@@ -128,14 +128,15 @@ inline void print_once(bool respect_print_once, const char *fmt, ...) {
 	va_start(list, fmt);
 
 	if (respect_print_once) {
-		if (!__printed_once) {
-			__printed_once = true;
-
+		if (!__printed_once)
 			vprintf(fmt, list);
-		}
-	} else {
+	} else
 		vprintf(fmt, list);
-	}
+
+	/* No matter if we respect or not respect the print_once, when
+	 * we reach at this point the message has been printed at least once.
+	 * So set the __printed_once variable to true. */
+	__printed_once = true;
 
 	va_end(list);
 }

@@ -109,17 +109,30 @@ struct edge_load_t {
 
 typedef adjacency_list < vecS, vecS, directedS > dumgraph_t;
 
-template < typename DistMap, typename LoadMap > class bfs_edge_visitor:public default_bfs_visitor {
+template < typename DistMap, typename LoadMap >
+class bfs_edge_visitor:public default_bfs_visitor {
 	typedef typename property_traits < DistMap >::value_type T;
+
 public:
 	bfs_edge_visitor(DistMap tmap, LoadMap tload, T & t):m_distmap(tmap), m_loadmap(tload), m_dist(t) { }
+
+	//template < typename Vertex, typename Graph >
+	//void initialize_vertex(Vertex v, Graph &g) const {
+	//	printf("Initializing Vertex '%d': %i %i\n", v, get(m_distmap, out_degree(v, g)), get(m_distmap, v));
+	//}
+
+	//template < typename Vertex, typename Graph >
+	//void discover_vertex(Vertex v, Graph &g) const {
+	//	printf("Discovering Vertex '%d': %i,\n", v, get(m_distmap, v));
+	//}
+
 	template < typename Edge, typename Graph >
-	void examine_edge(Edge e, const Graph & g) const
-	{
+	void examine_edge(Edge e, const Graph & g) const {
 		//int dist = get(m_distmap, g);
-		//printf("edge ... %i %i\n", get(m_distmap, source(e,g)), get(m_loadmap,e));
-		put(m_distmap, target(e,g), get(m_distmap, source(e,g))+get(m_loadmap,e));
+		//printf("Examining Edge: %d %d\n", get(m_distmap, source(e, g)), get(m_loadmap, e));
+		put(m_distmap, target(e,g), get(m_distmap, source(e, g)) + get(m_loadmap, e));
 	}
+
 	DistMap m_distmap;
 	LoadMap m_loadmap;
 	T  & m_dist;
@@ -151,16 +164,21 @@ void simulation_dep_max_delay(cmdargs_t *cmdargs, namelist_t *namelist, int vali
 	std::map<int,graph_traits <graph_t>::vertex_descriptor> prevleveldests; // destinations from the previous level
 
 	int level=0;
+	ptrn_t ptrn_at_level_0;
+
 	while (1) {
 		ptrn_t ptrn;
-
-		//void genptrn_by_name(ptrn_t *ptrn, char *name, char *frsname, char *secname, int comm_size, int partcomm_size, int level) {
 
 		genptrn_by_name(&ptrn, cmdargs->args_info.ptrn_arg, cmdargs->ptrnarg,
 		                cmdargs->args_info.commsize_arg, cmdargs->args_info.part_commsize_arg,
 		                level++);
-		if (ptrn.size()==0) break;
+
+		if (ptrn.size() == 0) break;
+
 		//printf("level: %i\n", level-1);
+		if ((level - 1) == 0)
+			ptrn_at_level_0 = ptrn;
+
 		if ((cmdargs->args_info.printptrn_given) && (myrank== 0)) { printptrn(&ptrn, namelist); }
 
 		std::map<int,graph_traits <graph_t>::vertex_descriptor> thisleveldests; // destinations from this level
@@ -173,7 +191,6 @@ void simulation_dep_max_delay(cmdargs_t *cmdargs, namelist_t *namelist, int vali
 			uroute_t route;
 			find_route(&route, namelist->at(iter_ptrn->first), namelist->at(iter_ptrn->second));
 			insert_route_into_cable_cong_map(&cable_cong, &route);
-
 		}
 
 		// step two: build graph with weighted edges
@@ -205,7 +222,7 @@ void simulation_dep_max_delay(cmdargs_t *cmdargs, namelist_t *namelist, int vali
 			graph_traits <graph_t>::vertex_descriptor dest_vertex = add_vertex(graph);
 			put(info, source_vertex, source_vertex_prop);
 			put(info, dest_vertex, dest_vertex_prop);
-			put(info, dest_vertex, dest_vertex_prop);
+			//printf("Adding vertex descriptors: %d, %d\n", source_vertex, dest_vertex);
 
 			// add this level's destinations destination to prevleveldests
 			thisleveldests.insert(std::pair<int,graph_traits <graph_t>::vertex_descriptor>(iter_ptrn->second,dest_vertex));
@@ -219,12 +236,14 @@ void simulation_dep_max_delay(cmdargs_t *cmdargs, namelist_t *namelist, int vali
 			put(load, new_edge, weight);
 		}
 
-		/*for(std::map<int,graph_traits <graph_t>::vertex_descriptor>::iterator iter=prevleveldests.begin(); iter!=prevleveldests.end(); ++iter) {
-	  printf("%i\n", *iter);
-	}*/
+		//for(std::map<int,graph_traits <graph_t>::vertex_descriptor>::iterator iter = prevleveldests.begin(); iter != prevleveldests.end(); ++iter) {
+		//	printf("%i\n", *iter);
+		//}
 
-		for(std::map<int,graph_traits <graph_t>::vertex_descriptor>::iterator iter=thislevelsources.begin(); iter!=thislevelsources.end(); ++iter) {
-			std::map<int,graph_traits <graph_t>::vertex_descriptor>::iterator prevleveldest=prevleveldests.find((*iter).first);
+		for(std::map<int,graph_traits <graph_t>::vertex_descriptor>::iterator iter = thislevelsources.begin(); iter != thislevelsources.end(); ++iter) {
+
+			std::map<int,graph_traits <graph_t>::vertex_descriptor>::iterator prevleveldest = prevleveldests.find((*iter).first);
+
 			if(prevleveldests.end() != prevleveldest) {
 				//printf("%i in previous destinations\n", (*iter).first);
 				// create edge between the two vertices
@@ -245,38 +264,50 @@ void simulation_dep_max_delay(cmdargs_t *cmdargs, namelist_t *namelist, int vali
 	// traverse graph from the roots and report longest path to any edge
 	// TODO: there are cycles if there is cyclic communication in a level :-(
 	{
-		ptrn_t ptrn;
-		genptrn_by_name(&ptrn, cmdargs->args_info.ptrn_arg, cmdargs->ptrnarg,
-		                cmdargs->args_info.commsize_arg, cmdargs->args_info.part_commsize_arg,
-		                0);
 		int max=0;
-		for (ptrn_t::iterator iter_ptrn = ptrn.begin(); iter_ptrn != ptrn.end(); iter_ptrn++) {
+		for (ptrn_t::iterator iter_ptrn = ptrn_at_level_0.begin(); iter_ptrn != ptrn_at_level_0.end(); iter_ptrn++) {
 			if((iter_ptrn->first >= valid_until) || (iter_ptrn->second >= valid_until)) continue;
 
+			graph_traits <graph_t>::vertex_descriptor cur_vertex;
+			vertex_t cur_vertex_prop;
+			for (graph_traits <graph_t>::vertex_descriptor v = 0; v < num_vertices(graph); v++) {
+				cur_vertex_prop = get(info, v);
+				if ((*iter_ptrn).first == cur_vertex_prop.name) {
+					cur_vertex = v;
+					break;
+				}
+			}
 			/* do a dijkstra along every first communication edge */
-			/*std::vector<graph_traits<graph_t>::vertex_descriptor> p(num_vertices(graph));
-	  std::vector<int> d(num_vertices(graph));
+			//std::vector<graph_traits<graph_t>::vertex_descriptor> p(num_vertices(graph));
+			//std::vector<int> d(num_vertices(graph));
 
-	  // compare function is greater, thus it searches longest paths!
-	  dijkstra_shortest_paths(graph, (*iter_ptrn).first, &p[0], &d[0], load, indexmap,
-							  std::less<int>(), closed_plus<int>(),
-							  (std::numeric_limits<int>::max)(), 0,
-							  default_dijkstra_visitor()); */
+			/* compare function is greater, thus it searches longest paths! */
+			//dijkstra_shortest_paths(graph, (*iter_ptrn).first, &p[0], &d[0], load, indexmap,
+			//        std::less<int>(), closed_plus<int>(),
+			//        (std::numeric_limits<int>::max)(), 0,
+			//        default_dijkstra_visitor());
 
 			// do BFS and attach distance to root to each vertex
 			typedef property_map<graph_t, vertex_dist_t>::type vert_dist_t;
 			vert_dist_t m_dist = get(vertex_dist_t(), graph);
-			int dist=0;
-			bfs_edge_visitor <vert_dist_t,ed_load_t>vis(m_dist, load, dist);
-			breadth_first_search(graph, (*iter_ptrn).first, visitor(vis));
+			int dist = 0;
+
+			//printf("num_vertices(graph): %d, m_dist: %d, dist %d\n",
+			//       num_vertices(graph), m_dist, dist);
+			//printf("src: %d, dst: %d, WRONG: %d, CORRECT: %d\n",
+			//       iter_ptrn->first, iter_ptrn->second,
+			//       get(info, (*iter_ptrn).first).name, cur_vertex_prop.name);
+			bfs_edge_visitor <vert_dist_t, ed_load_t>vis(m_dist, load, dist);
+			//breadth_first_search(graph, (*iter_ptrn).first, visitor(vis));
+			breadth_first_search(graph, cur_vertex, visitor(vis));
 
 			// loop over all vertices and find biggest time
 			graph_traits<graph_t>::vertex_iterator viter, viter_end;
 			for (tie(viter, viter_end) = vertices(graph); viter != viter_end; ++viter) {
-				//for(int i=0; i<num_vertices(graph); i++) {
+				//for(int i = 0; i < num_vertices(graph); i++) {
 				//  int dist = d[i];
-				int dist = get(m_dist, *viter);
-				if(std::numeric_limits<int>::max () != dist) {
+				dist = get(m_dist, *viter);
+				if(std::numeric_limits<int>::max() != dist) {
 					if(dist > max) max=dist;
 					//printf("dist: %i\n", dist);
 				}
