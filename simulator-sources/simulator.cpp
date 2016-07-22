@@ -1073,11 +1073,8 @@ void bcast_guidlist(guidlist_t *guidlist, int my_mpi_rank) {
 	if(my_mpi_rank == 0) {
 		buffer = (unsigned long long *)malloc(guidlist->size() * sizeof(guidlist->at(0)));
 		//unsigned long long *pos = buffer;
-		for (i = 0; i < guidlist->size(); i++) {
+		for (i = 0; i < guidlist->size(); i++)
 			buffer[i] = guidlist->at(i);
-			//memcpy(pos, &guidlist->at(i), size_of_ull);
-			//pos += sizeof(guidlist->size(0));
-		}
 	}
 
 	/* bcast buffer size */
