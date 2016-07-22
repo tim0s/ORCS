@@ -648,7 +648,9 @@ void generate_random_mapping(named_ptrn_t *mapping, ptrn_t *ptrn) {
 	}
 }
 
-void generate_random_namelist(namelist_t *namelist, int comm_size) {
+void generate_random_namelist(OUT namelist_t *namelist,
+                              IN int comm_size,
+                              IN namelist_t *namelist_pool) {
 	
 	MTRand mtrand;
 	namelist_t tmp_namelist;
@@ -680,7 +682,9 @@ void generate_random_namelist(namelist_t *namelist, int comm_size) {
 	}
 }
 
-void generate_linear_namelist_bfs(namelist_t *namelist, int comm_size) {
+void generate_linear_namelist_bfs(OUT namelist_t *namelist,
+                                  IN int comm_size,
+                                  IN namelist_t *namelist_pool) {
 
 	Agnode_t *node;
 	std::queue<Agnode_t*> queue;
@@ -713,7 +717,10 @@ void generate_linear_namelist_bfs(namelist_t *namelist, int comm_size) {
 	}
 }
 
-void generate_linear_namelist_guid_order(namelist_t *namelist, int comm_size, bool asc = true) {
+void generate_linear_namelist_guid_order(OUT namelist_t *namelist,
+                                         IN int comm_size,
+                                         IN namelist_t *namelist_pool,
+                                         IN bool asc) {
 
 	namelist_t tmp_namelist;
 	guidlist_t guids, sorted_guids;
@@ -1049,19 +1056,19 @@ void recieve_namelist(namelist_t *namelist) {
 	}
 }
 
-void bcast_namelist(namelist_t *namelist, int comm_size, int rank) {
-	int count = 0;
+void bcast_namelist(namelist_t *namelist, int my_mpi_rank) {
+	int count = 0, i;
 	char *buffer;
 	
-	/* pack buffer on  rank 0 */
-	if(!rank) {
-		for (int i=0; i<namelist->size(); i++) {
+	/* Pack buffer on rank 0 */
+	if(my_mpi_rank == 0) {
+		for (i = 0; i < namelist->size(); i++) {
 			count += strlen(namelist->at(i).c_str()) + 1;
 		}
 
 		buffer = (char *) malloc(count * sizeof(char));
 		char *pos = buffer;
-		for (int i=0; i<namelist->size(); i++) {
+		for (i = 0; i < namelist->size(); i++) {
 			strcpy(pos, namelist->at(i).c_str());
 			pos += strlen(namelist->at(i).c_str()) + 1;
 		}
@@ -1069,13 +1076,14 @@ void bcast_namelist(namelist_t *namelist, int comm_size, int rank) {
 
 	/* bcast buffer size */
 	MPI_Bcast(&count, 1, MPI_INT, 0, MPI_COMM_WORLD);
-	if(rank) buffer = (char *) malloc(count * sizeof(char));
+	if(my_mpi_rank != 0)
+		buffer = (char *) malloc(count * sizeof(char));
 
 	/* bcast buffer data */
 	MPI_Bcast(buffer, count, MPI_CHAR, 0, MPI_COMM_WORLD);
 
 	/* unpack buffer data on clients */
-	if(rank) {
+	if(my_mpi_rank != 0) {
 		char *pos = buffer;
 		while (pos < buffer + count) {
 			namelist->push_back(pos);
@@ -1181,11 +1189,21 @@ void exchange_results2(int mynode, int allnodes) {
 	}
 }
 
-void generate_namelist_by_name(char *method, namelist_t *namelist, int comm_size) {
-	if (strcmp(method, "rand") == 0) { generate_random_namelist(namelist, comm_size); }
-	if (strcmp(method, "linear_bfs") == 0) { generate_linear_namelist_bfs(namelist, comm_size); }
-	if (strcmp(method, "guid_order_asc") == 0) { generate_linear_namelist_guid_order(namelist, comm_size); }
-	if (strcmp(method, "guid_order_desc") == 0) { generate_linear_namelist_guid_order(namelist, comm_size, false); }
+void generate_namelist_by_name(IN char *method,
+                               OUT namelist_t *namelist,
+                               IN int comm_size,
+                               IN namelist_t *namelist_pool) {
+	if (strcmp(method, "rand") == 0)
+		generate_random_namelist(namelist, comm_size, namelist_pool);
+
+	else if (strcmp(method, "linear_bfs") == 0)
+		generate_linear_namelist_bfs(namelist, comm_size, namelist_pool);
+
+	else if (strcmp(method, "guid_order_asc") == 0)
+		generate_linear_namelist_guid_order(namelist, comm_size, namelist_pool);
+
+	else if (strcmp(method, "guid_order_desc") == 0)
+		generate_linear_namelist_guid_order(namelist, comm_size, namelist_pool, false);
 }
 
 /* quick and dirty allreduce for maps<int,int> where the maximum key is

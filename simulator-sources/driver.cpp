@@ -115,10 +115,11 @@ int main(int argc, char *argv[]) {
 	/* get a list of all endpoint-names that we will work with from the dot-file
 	 * This list, the namelist, may be a subset of the complete list. */
 	if (mynode == 0)
-		generate_namelist_by_name(cmdargs.args_info.subset_arg, &namelist, cmdargs.args_info.commsize_arg);
+		generate_namelist_by_name(cmdargs.args_info.subset_arg, &namelist,
+		                          cmdargs.args_info.commsize_arg);
 
 	/* distribute namelist from root to all nodes */
-	bcast_namelist(&namelist, allnodes, mynode);
+	bcast_namelist(&namelist, mynode);
 
 	/* assess the quality of the routing table */
 	if(mynode == 0) {

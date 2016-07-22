@@ -86,10 +86,20 @@ void simulation_get_cable_cong(ptrn_t *ptrn, namelist_t *namelist, int state);
 void print_commandline_options(FILE *fd, cmdargs_t *cmdargs);
 void print_results(cmdargs_t *cmdargs, int mynode, int allnodes);
 void print_namelist(namelist_t *namelist);
-void generate_namelist_by_name(char *method, namelist_t *namelist, int comm_size);
-void generate_random_namelist(namelist_t *namelist, int comm_size);
-void generate_linear_namelist_bfs(namelist_t *namelist, int comm_size);
-void generate_linear_namelist_guid_order(namelist_t *namelist, int comm_size, bool asc);
+void generate_namelist_by_name(IN char *method,
+                               OUT namelist_t *namelist,
+                               IN int comm_size,
+                               IN namelist_t *namelist_pool = NULL);
+void generate_random_namelist(OUT namelist_t *namelist,
+                              IN int comm_size,
+                              IN namelist_t *namelist_pool);
+void generate_linear_namelist_bfs(OUT namelist_t *namelist,
+                                  IN int comm_size,
+                                  IN namelist_t *namelist_pool);
+void generate_linear_namelist_guid_order(OUT namelist_t *namelist,
+                                         IN int comm_size,
+                                         IN namelist_t *namelist_pool,
+                                         IN bool asc = true);
 void shuffle_namelist(namelist_t *namelist);
 void simulate(used_edges_t *edge_list,  ptrn_t *ptrn, int num_runs);
 void find_route(uroute_t *route, std::string n1, std::string n2);
@@ -111,7 +121,7 @@ void my_mpi_init(int *argc, char ***argv, int *rank, int *comm_size);
 void read_input_graph(char *filename);
 void read_node_ordering(IN char *filename,
                         OUT guidlist_t *guidorder_list);
-void bcast_namelist(namelist_t *namelist, int comm_size, int rank);
+void bcast_namelist(namelist_t *namelist, int my_mpi_rank);
 void exchange_results(int mynode, int allnodes, double result);
 void exchange_results2(int mynode, int allnodes);
 void insert_route_into_cable_cong_map(cable_cong_map_t *cable_cong, uroute_t *route);
