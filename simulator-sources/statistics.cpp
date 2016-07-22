@@ -233,34 +233,23 @@ void print_statistics_max_delay(FILE *fd) {
 void print_histogram(FILE *fd) {
 
 	int count;
-	double min = 9999999;
-	double max = 0;
 
-	/*	for (count=0; count<acc_bandwidths.size(); count++) {
-		if (min>acc_bandwidths.at(count)) min = acc_bandwidths.at(count);
-		if (max<acc_bandwidths.at(count)) max = acc_bandwidths.at(count);
-	}
-*/
-	/*	if (max == min) {
-		fprintf(fd, "No Histogramm, all values are the same...\n");
-		return;
-	}
-*/
-	//double w = 3.49 * sqrt(get_var_bandwidth(get_avg_bandwidth())) * pow(acc_bandwidths.size(), (double) -1 / 3);
-	//fprintf(fd, "%s %f\n", "Histogramm bin width:", w);
-	double w=0.05;
+	double w = 0.05;
+
 	fprintf(fd, "%s %f\n", "Histogramm bin width:", w);
 	fprintf(fd, "%s\n", "Fraction of full bandwidt | Number of occurences");
-	gsl_histogram *h = gsl_histogram_alloc((size_t)(1.0/w));
-	//gsl_histogram_set_ranges_uniform (h, floor(min), ceil(max));
-	gsl_histogram_set_ranges_uniform (h, 0, 1.01);
-	for (count=0; count<acc_bandwidths.size(); count++) {
+
+	gsl_histogram *h = gsl_histogram_alloc((size_t)(1.0 / w));
+	gsl_histogram_set_ranges_uniform (h, 0, 1.000000000000001);
+
+	for (count = 0; count < acc_bandwidths.size(); count++) {
 		if (gsl_histogram_increment(h, acc_bandwidths.at(count)) != 0) {
 			printf("Moo\n");
 			printf("%f\n", acc_bandwidths.at(count));
 			exit(EXIT_FAILURE);
 		}
 	}
+
 	gsl_histogram_fprintf(fd, h, "%12.8f", "%5.0f");
 	gsl_histogram_free(h);
 }
