@@ -897,12 +897,23 @@ void get_max_congestion(uroute_t *route, cable_cong_map_t *cable_cong, int *weig
 }
 
 void my_mpi_init(int *argc, char **argv[], int *rank, int *comm_size) {
+	int *recvbuf, i;
+
 	MPI_Init(argc, argv);
 	MPI_Comm_size(MPI_COMM_WORLD, comm_size);
 	MPI_Comm_rank(MPI_COMM_WORLD, rank);
-	std::cout << "Hello from MPI node with rank " << *rank << ".\n" <<
-	             "Total MPI nodes participating in the simulation: " <<
-	             *comm_size <<  std::endl << std::endl;
+
+	recvbuf = (int *) malloc(*comm_size * sizeof(*rank));
+
+	MPI_Gather(rank, 1, MPI_INT, recvbuf, 1, MPI_INT, 0, MPI_COMM_WORLD);
+	if (*rank == 0) {
+		printf("Total MPI nodes participating in the simulation: '%d'\n", *comm_size);
+		printf("Hello from Master MPI node with rank '%d' (%d/%d)\n",
+		       *rank, *rank + 1, * comm_size);
+		for (i = 1; i < *comm_size; i++)
+			printf("Hello from MPI node with rank '%d' (%d/%d)\n",
+			       recvbuf[i], recvbuf[i] + 1, * comm_size);
+	}
 }
 
 void read_input_graph(char *filename) {
