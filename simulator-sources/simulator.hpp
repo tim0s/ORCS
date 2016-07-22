@@ -120,6 +120,7 @@ void my_mpi_init(int *argc, char ***argv, int *rank, int *comm_size);
 void read_input_graph(char *filename);
 void read_node_ordering(IN char *filename,
                         OUT guidlist_t *guidorder_list);
+void bcast_guidlist(guidlist_t *guidlist, int my_mpi_rank);
 void bcast_namelist(namelist_t *namelist, int my_mpi_rank);
 void exchange_results(int mynode, int allnodes, double result);
 void exchange_results2(int mynode, int allnodes);

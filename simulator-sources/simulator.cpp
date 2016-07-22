@@ -1065,6 +1065,38 @@ void recieve_namelist(namelist_t *namelist) {
 	}
 }
 
+void bcast_guidlist(guidlist_t *guidlist, int my_mpi_rank) {
+	int count = 0, i;
+	unsigned long long *buffer;
+
+	/* Pack buffer on rank 0 */
+	if(my_mpi_rank == 0) {
+		buffer = (unsigned long long *)malloc(guidlist->size() * sizeof(guidlist->at(0)));
+		//unsigned long long *pos = buffer;
+		for (i = 0; i < guidlist->size(); i++) {
+			buffer[i] = guidlist->at(i);
+			//memcpy(pos, &guidlist->at(i), size_of_ull);
+			//pos += sizeof(guidlist->size(0));
+		}
+	}
+
+	/* bcast buffer size */
+	MPI_Bcast(&count, 1, MPI_INT, 0, MPI_COMM_WORLD);
+	if(my_mpi_rank != 0)
+		buffer = (unsigned long long *)malloc(count);
+
+	/* bcast buffer data */
+	MPI_Bcast(buffer, count, MPI_UNSIGNED_LONG_LONG, 0, MPI_COMM_WORLD);
+
+	/* unpack buffer data on clients */
+	if(my_mpi_rank != 0) {
+		for (i = 0; i < count; i++)
+			guidlist->push_back(buffer[i]);
+	}
+
+	free(buffer);
+}
+
 void bcast_namelist(namelist_t *namelist, int my_mpi_rank) {
 	int count = 0, i;
 	char *buffer;

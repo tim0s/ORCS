@@ -591,6 +591,13 @@ void perform_sanity_checks_in_args(IN OUT cmdargs_t *cmdargs) {
 	char *ptrn = cmdargs->args_info.ptrn_arg;
 	char *ptrnarg = cmdargs->args_info.ptrnarg_arg;
 
+	if (strcmp(cmdargs->args_info.part_subset_arg, "none") != 0) {
+		if (strcmp(ptrn, "ptrnvsptrn") != 0) {
+			fprintf(stderr, "ERROR: The 'part_subset' option can only be used with 'ptrnvsptrn' pattern.\n");
+			exit(EXIT_FAILURE);
+		}
+	}
+
 	/* Check the pattern name, and if the chosen pattern needs a
 	 * mandatory pattern argument that hasn't been provided, warn
 	 * and exit. */
