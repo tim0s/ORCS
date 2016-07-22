@@ -31,8 +31,8 @@ int main(int argc, char *argv[]) {
 	
 	// MPI variables, comm_rank and comm_size
 	int mynode, allnodes;
-	namelist_t namelist, complete_namelist, nodeorder_namelist, final_namelist;
-	guidlist_t guidlist, complete_guidlist, nodeorder_guidlist;
+	namelist_t namelist, part_namelist, complete_namelist, nodeorder_namelist, final_namelist;
+	guidlist_t guidlist, part_guidlist, complete_guidlist, nodeorder_guidlist;
 	int i, j;
 
 	cmdargs_t cmdargs;
@@ -74,18 +74,31 @@ int main(int argc, char *argv[]) {
 	 * check for the commsize and part_commsize, that is why we have these two here:
 	 *
 	 * Check that we have a sane commsize */
-	if (cmdargs.args_info.commsize_arg == 0) {
-		cmdargs.args_info.commsize_arg = complete_namelist.size() - complete_namelist.size() % 2;
-	} else if (cmdargs.args_info.commsize_arg > complete_namelist.size()) {
-		fprintf(stderr, "ERROR: You chose a very large 'commsize'.\n"
-		       "       The maximum possible communication size is %d\n", complete_namelist.size());
+	if (complete_namelist.size() < 4) {
+
+		fprintf(stderr, "ERROR: The dot file you provided contains the less than four hosts.\n"
+		        "       The simulator needs at least four hosts to run\n"
+		        "");
 		exit(EXIT_FAILURE);
+
+	} else if (cmdargs.args_info.commsize_arg == 0) {
+
+		cmdargs.args_info.commsize_arg = complete_namelist.size() - complete_namelist.size() % 2;
+
+	} else if (cmdargs.args_info.commsize_arg < 4 ||
+	           cmdargs.args_info.commsize_arg > complete_namelist.size()) {
+
+		fprintf(stderr, "ERROR: The communicator size (commsize) should be a number between '%d' and '%d'\n"
+		        "       You provided '%d'.\n", 4, complete_namelist.size(), cmdargs.args_info.commsize_arg);
+		exit(EXIT_FAILURE);
+
 	}
 
-	/* Check that the part_commsize is always smaller than commsize */
-	if (cmdargs.args_info.part_commsize_arg >= cmdargs.args_info.commsize_arg) {
-		fprintf(stderr, "ERROR: 'part_commsize' should always be smaller than 'commsize'.\n"
-		        "       The maximum possible part_commsize is %d\n", cmdargs.args_info.commsize_arg - 1);
+	/* Check that the we have a sane part_commsize (min 2, and always smaller than commsize) */
+	if (cmdargs.args_info.part_commsize_arg < 2 ||
+	        cmdargs.args_info.part_commsize_arg >= cmdargs.args_info.commsize_arg) {
+		fprintf(stderr, "ERROR: The first-part communicator size (part_commsize) should be a number between '%d' and '%d'\n"
+		        "       You provided '%d'.\n", 2, cmdargs.args_info.commsize_arg - 1, cmdargs.args_info.part_commsize_arg);
 		exit(EXIT_FAILURE);
 	}
 
@@ -112,11 +125,26 @@ int main(int argc, char *argv[]) {
 		if (cmdargs.args_info.routequal_given) cmdargs.args_info.commsize_arg = complete_namelist.size();
 	}
 
-	/* get a list of all endpoint-names that we will work with from the dot-file
+	/* Get a list of all endpoint-names that we will work with from the dot-file
 	 * This list, the namelist, may be a subset of the complete list. */
-	if (mynode == 0)
+	if (mynode == 0) {
 		generate_namelist_by_name(cmdargs.args_info.subset_arg, &namelist,
 		                          cmdargs.args_info.commsize_arg);
+
+		/* The part_subset_arg can be 'linear_bfs' ONLY if the subset_arg is
+		 * 'linear_bfs' as well. */
+		if (strcmp(cmdargs.args_info.part_subset_arg, "linear_bfs") == 0 &&
+		        strcmp(cmdargs.args_info.subset_arg, "linear_bfs") != 0) {
+			fprintf(stderr, "ERROR: 'part_subset' can be 'linear_bfs' only if 'subset' is 'linear_bfs' as well.\n");
+			exit(EXIT_FAILURE);
+		}
+
+		/* Choose the part_subset from the namelist and store in the part_namelist */
+		generate_namelist_by_name(cmdargs.args_info.part_subset_arg, &part_namelist,
+		                          cmdargs.args_info.part_commsize_arg, &namelist);
+		printf("PRINTING PART_NAMELIST\n");
+		print_namelist(&part_namelist);
+	}
 
 	/* distribute namelist from root to all nodes */
 	bcast_namelist(&namelist, mynode);

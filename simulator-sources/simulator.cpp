@@ -658,8 +658,12 @@ void generate_random_namelist(OUT namelist_t *namelist,
 	int pos;
 	int myrand;
 
-	// read name list from agraph file
-	get_namelist_from_graph(&tmp_namelist);
+	/* If a namelist_pool is provided, read the name list from the
+	 * namelist_pool. Otherwise, read from the agraph file */
+	if (namelist_pool != NULL)
+		tmp_namelist = *namelist_pool;
+	else
+		get_namelist_from_graph(&tmp_namelist);
 
 	std::vector<bool> bucket(tmp_namelist.size(), false);
 	
@@ -683,8 +687,7 @@ void generate_random_namelist(OUT namelist_t *namelist,
 }
 
 void generate_linear_namelist_bfs(OUT namelist_t *namelist,
-                                  IN int comm_size,
-                                  IN namelist_t *namelist_pool) {
+                                  IN int comm_size) {
 
 	Agnode_t *node;
 	std::queue<Agnode_t*> queue;
@@ -727,9 +730,15 @@ void generate_linear_namelist_guid_order(OUT namelist_t *namelist,
 	unsigned long long curr_guid;
 	int counter, pos;
 
-	/* Read name list from agraph file and get a list of numeric GUIDs as well in order
-	 * to be able to sort the guids numerically. */
-	get_namelist_from_graph(&tmp_namelist, &guids);
+	/* If a namelist_pool is provided, read the namelist from the namelist_pool.
+	 * Otherwise read the namelist from the agraph file. Also, get a list of the
+	 * numeric GUIDs as well in order to be able to sort the guids numerically. */
+	if (namelist_pool) {
+		tmp_namelist = *namelist_pool;
+		get_guidlist_from_namelist(&tmp_namelist, &guids);
+	}
+	else
+		get_namelist_from_graph(&tmp_namelist, &guids);
 
 	/* Copy the current guids list in a new list that we are going to sort.
 	 * Note: the equal operator copies a vector by value and not by reference,
@@ -1197,7 +1206,7 @@ void generate_namelist_by_name(IN char *method,
 		generate_random_namelist(namelist, comm_size, namelist_pool);
 
 	else if (strcmp(method, "linear_bfs") == 0)
-		generate_linear_namelist_bfs(namelist, comm_size, namelist_pool);
+		generate_linear_namelist_bfs(namelist, comm_size);
 
 	else if (strcmp(method, "guid_order_asc") == 0)
 		generate_linear_namelist_guid_order(namelist, comm_size, namelist_pool);

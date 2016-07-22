@@ -94,8 +94,7 @@ void generate_random_namelist(OUT namelist_t *namelist,
                               IN int comm_size,
                               IN namelist_t *namelist_pool);
 void generate_linear_namelist_bfs(OUT namelist_t *namelist,
-                                  IN int comm_size,
-                                  IN namelist_t *namelist_pool);
+                                  IN int comm_size);
 void generate_linear_namelist_guid_order(OUT namelist_t *namelist,
                                          IN int comm_size,
                                          IN namelist_t *namelist_pool,
