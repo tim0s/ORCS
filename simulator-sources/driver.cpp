@@ -24,7 +24,8 @@
 
 Agraph_t *mygraph;
 
-extern void perform_sanity_checks_in_args(IN OUT cmdargs_t *cmdargs);
+extern void perform_sanity_checks_in_args(IN OUT cmdargs_t *cmdargs,
+                                          IN int my_mpi_rank);
 extern void cleanup_args(IN char *ptrn, void *ptrnarg);
 
 int main(int argc, char *argv[]) {
@@ -37,8 +38,10 @@ int main(int argc, char *argv[]) {
 
 	cmdargs_t cmdargs;
 
+	my_mpi_init(&argc, &argv, &mynode, &allnodes);
+
 	if (cmdline_parser(argc, argv, &cmdargs.args_info) != 0) exit(EXIT_FAILURE);
-	perform_sanity_checks_in_args(&cmdargs);
+	perform_sanity_checks_in_args(&cmdargs, mynode);
 	
 	if (cmdargs.args_info.getnumlevels_given) {
 		int level = 0;
@@ -47,7 +50,7 @@ int main(int argc, char *argv[]) {
 			
 			genptrn_by_name(&ptrn, cmdargs.args_info.ptrn_arg, cmdargs.ptrnarg,
 			                cmdargs.args_info.commsize_arg, cmdargs.args_info.part_commsize_arg,
-			                level);
+			                level, mynode);
 			if (ptrn.size() == 0) { break; }
 
 			level++; //proceed to next level
@@ -55,8 +58,6 @@ int main(int argc, char *argv[]) {
 		std::cout << "The given input configuration would result in a " << level << " level simulation." << std::endl;
 		return level;
 	}
-
-	my_mpi_init(&argc, &argv, &mynode, &allnodes);
 
 	/* TODO: should only be done on rank 0 */
 	read_input_graph(cmdargs.args_info.input_file_arg);
@@ -412,7 +413,7 @@ int main(int argc, char *argv[]) {
 
 				genptrn_by_name(&ptrn, cmdargs.args_info.ptrn_arg, cmdargs.ptrnarg,
 				                cmdargs.args_info.commsize_arg, cmdargs.args_info.part_commsize_arg,
-				                level);
+				                level, mynode);
 
 				if (ptrn.size()==0 || (cmdargs.args_info.ptrn_level_arg > -1 && level > cmdargs.args_info.ptrn_level_arg)) {break;}
 				if ((cmdargs.args_info.printptrn_given) && (mynode == 0)) { printptrn(&ptrn, &final_namelist); }

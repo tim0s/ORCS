@@ -169,7 +169,7 @@ void simulation_dep_max_delay(cmdargs_t *cmdargs, namelist_t *namelist, int vali
 
 		genptrn_by_name(&ptrn, cmdargs->args_info.ptrn_arg, cmdargs->ptrnarg,
 		                cmdargs->args_info.commsize_arg, cmdargs->args_info.part_commsize_arg,
-		                level++);
+		                level++, myrank);
 
 		if (ptrn.size() == 0) break;
 		//printf("level: %i\n", level-1);

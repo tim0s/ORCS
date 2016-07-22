@@ -181,43 +181,47 @@ int check_if_ptrn_available_for_ptrnvsptrn(const char *ptrn) {
  */
 static void print_ptrnarg_help(IN char *ptrn,
                                IN char *ptrnarg,
+                               IN int my_mpi_rank,
                                IN bool error = false,
                                IN bool terminate_prog = true) {
 
-	fprintf(stderr, "\n%s: ", error ? "ERROR" : "Usage");
+	if (my_mpi_rank == 0) {
 
-	if (strcmp(ptrn, "neighbor") == 0) {
-		/* Prints an INT Required usage/error message */
-		fprintf(stderr, "Pattern '%s' requires an integer ptrnarg that is greater than 0.\n", ptrn);
-	} else if (strcmp(ptrn, "receivers") == 0) {
-		fprintf(stderr, "Pattern '%s' requires a ptrnarg in the following format:\n"
-		        "         <num_receivers>[,<chance_factor_1>[,<chance_factor_2>]]\n"
-		        "         \n"
-		        "       The 'num_receivers' arg is a mandatory integer number greater than zero, and defines the number\n"
-		        "         of receivers that will be used in the experiment.\n"
-		        "       The 'chance_factor_1' arg is an optional percentage (accepts values between 0.0 and 1.0) and defines\n"
-		        "         a chance that a chosen source node will have to communicate with a receiver in the pattern. If no\n"
-		        "         chance_factor_1 is provided, the chance_factor_1 is set to 1.0, and the chosen source nodes will\n"
-		        "         always communicate with a receiver.\n"
-		        "       The 'chance_factor_2' arg is another optional percentage (accepts values between 0.0 and 1.0) and\n"
-		        "         defines the chance that if a chosen source node is decided that will not communicate with a\n"
-		        "         receiver (based on chance_factor_1), there is a chance that it will stay idle (i.e. not communicate\n"
-		        "         at all with any other node). If the chance_factor_1 is set to 1.0, the chance_factor_2 will have no\n"
-		        "         effect in the experiment. The chance_factor_2 is set to 0.0 by default, i.e. there are no idle nodes.\n", ptrn);
-	} else if (strcmp(ptrn, "ptrnvsptrn") == 0) {
-		fprintf(stderr, "Pattern '%s' requires a string ptrnarg in the following format:\n"
-		        "         <pattern1>[:<arg2>]::<pattern2>[:<arg2>]\n"
-		        "         \n"
-		        "       The args ('arg1' and/or 'arg2') are optional, and should only be provided if the used patterns\n"
-		        "        need an argument. All of the available patterns except 'ptrnvsptrn' can be used for either\n"
-		        "        'pattern1' or 'pattern2'.\n", ptrn);
+		fprintf(stderr, "\n%s: ", error ? "ERROR" : "Usage");
+
+		if (strcmp(ptrn, "neighbor") == 0) {
+			/* Prints an INT Required usage/error message */
+			fprintf(stderr, "Pattern '%s' requires an integer ptrnarg that is greater than 0.\n", ptrn);
+		} else if (strcmp(ptrn, "receivers") == 0) {
+			fprintf(stderr, "Pattern '%s' requires a ptrnarg in the following format:\n"
+					"         <num_receivers>[,<chance_factor_1>[,<chance_factor_2>]]\n"
+					"         \n"
+					"       The 'num_receivers' arg is a mandatory integer number greater than zero, and defines the number\n"
+					"         of receivers that will be used in the experiment.\n"
+					"       The 'chance_factor_1' arg is an optional percentage (accepts values between 0.0 and 1.0) and defines\n"
+					"         a chance that a chosen source node will have to communicate with a receiver in the pattern. If no\n"
+					"         chance_factor_1 is provided, the chance_factor_1 is set to 1.0, and the chosen source nodes will\n"
+					"         always communicate with a receiver.\n"
+					"       The 'chance_factor_2' arg is another optional percentage (accepts values between 0.0 and 1.0) and\n"
+					"         defines the chance that if a chosen source node is decided that will not communicate with a\n"
+					"         receiver (based on chance_factor_1), there is a chance that it will stay idle (i.e. not communicate\n"
+					"         at all with any other node). If the chance_factor_1 is set to 1.0, the chance_factor_2 will have no\n"
+					"         effect in the experiment. The chance_factor_2 is set to 0.0 by default, i.e. there are no idle nodes.\n", ptrn);
+		} else if (strcmp(ptrn, "ptrnvsptrn") == 0) {
+			fprintf(stderr, "Pattern '%s' requires a string ptrnarg in the following format:\n"
+					"         <pattern1>[:<arg2>]::<pattern2>[:<arg2>]\n"
+					"         \n"
+					"       The args ('arg1' and/or 'arg2') are optional, and should only be provided if the used patterns\n"
+					"        need an argument. All of the available patterns except 'ptrnvsptrn' can be used for either\n"
+					"        'pattern1' or 'pattern2'.\n", ptrn);
+		}
+
+		fprintf(stderr, "%s%s%s%s\n",
+			   ptrnarg ? "\nPattern argument '" : "",
+			   ptrnarg ? ptrnarg : "",
+			   ptrnarg ? "' " : "",
+			   ptrnarg ? "provided." : "");
 	}
-
-	fprintf(stderr, "%s%s%s%s\n",
-	       ptrnarg ? "\nPattern argument '" : "",
-           ptrnarg ? ptrnarg : "",
-           ptrnarg ? "' " : "",
-           ptrnarg ? "provided." : "");
 
 	if (terminate_prog) {
 		if (error)
@@ -233,7 +237,8 @@ static void print_ptrnarg_help(IN char *ptrn,
  */
 static void process_ptrnargs(IN char *ptrn,
                              IN char *ptrnarg,
-                             IN OUT cmdargs_t *cmdargs) {
+                             IN OUT cmdargs_t *cmdargs,
+                             IN int my_mpi_rank) {
 
 	int max_ptrn_size;
 
@@ -244,7 +249,8 @@ static void process_ptrnargs(IN char *ptrn,
 
 	/* Ensure that the user is not providing a string larger than what we can handle */
 	if (strlen(ptrnarg) > max_ptrn_size) {
-		fprintf(stderr, "ERROR: The max accepted arg size for ptrn '%s' is %d\n", ptrn, max_ptrn_size);
+		if (my_mpi_rank == 0)
+			fprintf(stderr, "ERROR: The max accepted arg size for ptrn '%s' is %d\n", ptrn, max_ptrn_size);
 		exit(EXIT_FAILURE);
 	}
 
@@ -256,7 +262,7 @@ static void process_ptrnargs(IN char *ptrn,
 	 *       anything.
 	 */
 	if (strcmp(ptrnarg, "help") == 0)
-		print_ptrnarg_help(ptrn, NULL);
+		print_ptrnarg_help(ptrn, NULL, my_mpi_rank);
 
 	/* If the pattern argument != "help", check which pattern
 	 * we are currently processing, and parse the pattern args
@@ -277,7 +283,7 @@ static void process_ptrnargs(IN char *ptrn,
 		*ptrnarg_i = strtoi(ptrnarg, &next_num, 10);
 		if (strlen(next_num) != 0 || *ptrnarg_i < 1) {
 			free(ptrnarg_i);
-			print_ptrnarg_help(ptrn, ptrnarg, true);
+			print_ptrnarg_help(ptrn, ptrnarg, my_mpi_rank, true);
 		}
 
 		cmdargs->ptrnarg = (void *)ptrnarg_i;
@@ -316,14 +322,15 @@ static void process_ptrnargs(IN char *ptrn,
 		/* Why I use double backslash to escape the 'dot': http://stackoverflow.com/a/18477178/1275161 */
 		ret = regcomp(&regex, "^([[:digit:]]+)(,([-+]?[0-9]*\\.?[0-9]+))?(,([-+]?[0-9]*\\.?[0-9]+))?$", REG_EXTENDED);
 		if (ret) {
-			fprintf(stderr, "Could not compile regex\n");
+			if (my_mpi_rank == 0)
+				fprintf(stderr, "Could not compile regex\n");
 			exit(EXIT_FAILURE);
 		}
 
 		ret = regexec(&regex, cursor, numGroups, matchedGroups, 0);
 		if (ret)
 			/* No match, so print the error message and exit */
-			print_ptrnarg_help(ptrn, ptrnarg, true);
+			print_ptrnarg_help(ptrn, ptrnarg, my_mpi_rank, true);
 
 		for (g = 0; g < numGroups; g++) {
 
@@ -347,10 +354,10 @@ static void process_ptrnargs(IN char *ptrn,
 			if (g == 0) {
 				/* Check if the complete matched string is the same as the ptrnarg. */
 				if (strncmp(ptrnarg, match, strlen(match)) != 0) {
-					printf("here: %s, %s, %d\n", ptrnarg, match, strlen(match));
+					//printf("here: %s, %s, %d\n", ptrnarg, match, strlen(match));
 					/* The complete string provided by the user should match exactly.
 					 * Otherwise print an error message and exit. */
-					print_ptrnarg_help(ptrn, ptrnarg, true);
+					print_ptrnarg_help(ptrn, ptrnarg, my_mpi_rank, true);
 				}
 			} else {
 				char *next_num;
@@ -361,7 +368,7 @@ static void process_ptrnargs(IN char *ptrn,
 						num_receivers = strtoi(match, &next_num, 10);
 						if (strlen(next_num) != 0 || num_receivers < 1) {
 							free(receivers_args);
-							print_ptrnarg_help(ptrn, ptrnarg, true);
+							print_ptrnarg_help(ptrn, ptrnarg, my_mpi_rank, true);
 						}
 						receivers_args->num_receivers = num_receivers;
 						break;
@@ -374,7 +381,7 @@ static void process_ptrnargs(IN char *ptrn,
 						        (process_a_chance < 0 ||
 						         process_a_chance > 1)) {
 							free(receivers_args);
-							print_ptrnarg_help(ptrn, ptrnarg, true);
+							print_ptrnarg_help(ptrn, ptrnarg, my_mpi_rank, true);
 						}
 						if (g == 3)
 							receivers_args->chance_to_send_to_a_receiver = process_a_chance;
@@ -434,7 +441,8 @@ static void process_ptrnargs(IN char *ptrn,
 		 */
 		ret = regcomp(&regex, "^([^:[:blank:]]+)(:([^:[:blank:]]+))?::([^:[:blank:]]+)(:([^:[:blank:]]+))?$", REG_EXTENDED);
 		if (ret) {
-			fprintf(stderr, "Could not compile regex\n");
+			if (my_mpi_rank == 0)
+				fprintf(stderr, "Could not compile regex\n");
 			exit(EXIT_FAILURE);
 		}
 
@@ -443,7 +451,7 @@ static void process_ptrnargs(IN char *ptrn,
 		ret = regexec(&regex, cursor, numGroups, matchedGroups, 0);
 		if (ret)
 			/* No match, so print the error message and exit */
-			print_ptrnarg_help(ptrn, ptrnarg, true);
+			print_ptrnarg_help(ptrn, ptrnarg, my_mpi_rank, true);
 
 		/* We have matches, and information about those matches is stored in the
 		 * matchedGroups array */
@@ -475,10 +483,10 @@ static void process_ptrnargs(IN char *ptrn,
 
 				/* Check if the complete matched string is the same as the ptrnarg. */
 				if (strncmp(ptrnarg, complete_match, strlen(complete_match)) != 0) {
-					printf("here: %s, %s, %d\n", ptrnarg, complete_match, strlen(complete_match));
+					//printf("here: %s, %s, %d\n", ptrnarg, complete_match, strlen(complete_match));
 					/* The complete string provided by the user should match exactly.
 					 * Otherwise print an error message and exit. */
-					print_ptrnarg_help(ptrn, ptrnarg, true);
+					print_ptrnarg_help(ptrn, ptrnarg, my_mpi_rank, true);
 				}
 
 			} else {
@@ -528,22 +536,24 @@ static void process_ptrnargs(IN char *ptrn,
 			unknown_ptrn2 = true;
 
 		if (unknown_ptrn1 || unknown_ptrn2) {
-			print_ptrnarg_help(ptrn, ptrnarg, true, false);
+			print_ptrnarg_help(ptrn, ptrnarg, my_mpi_rank, true, false);
 
-			printf("\n"
-			       "-------------------------------\n"
-			       "Unknown pattern%s: %s%s%s\n"
-			       "-------------------------------\n",
-			       unknown_ptrn1 && unknown_ptrn2 ? "s" : "",
-			       unknown_ptrn1 ? ptrnvsptrn->ptrn1 : "",
-			       unknown_ptrn1 && unknown_ptrn2 ? ", " : "",
-			       unknown_ptrn2 ? ptrnvsptrn->ptrn2 : "");
+			if (my_mpi_rank == 0) {
+				printf("\n"
+				       "-------------------------------\n"
+				       "Unknown pattern%s: %s%s%s\n"
+				       "-------------------------------\n",
+				       unknown_ptrn1 && unknown_ptrn2 ? "s" : "",
+				       unknown_ptrn1 ? ptrnvsptrn->ptrn1 : "",
+				       unknown_ptrn1 && unknown_ptrn2 ? ", " : "",
+				       unknown_ptrn2 ? ptrnvsptrn->ptrn2 : "");
 
-			/* Print available patterns */
-			printf("\nAvailable patterns are:\n");
-			for (i = 0; cmdline_parser_ptrn_values[i]; i++) {
-				if (strcmp(cmdline_parser_ptrn_values[i], "ptrnvsptrn") != 0)
-					printf("     %s\n", cmdline_parser_ptrn_values[i]);
+				/* Print available patterns */
+				printf("\nAvailable patterns are:\n");
+				for (i = 0; cmdline_parser_ptrn_values[i]; i++) {
+					if (strcmp(cmdline_parser_ptrn_values[i], "ptrnvsptrn") != 0)
+						printf("     %s\n", cmdline_parser_ptrn_values[i]);
+				}
 			}
 			exit(EXIT_FAILURE);
 		}
@@ -556,8 +566,8 @@ static void process_ptrnargs(IN char *ptrn,
 		cmdargs_ptrn1.args_info = cmdargs->args_info;
 		cmdargs_ptrn2.args_info = cmdargs->args_info;
 
-		process_ptrnargs(ptrnvsptrn->ptrn1, ptrnvsptrn->ptrnargstr1, &cmdargs_ptrn1);
-		process_ptrnargs(ptrnvsptrn->ptrn2, ptrnvsptrn->ptrnargstr2, &cmdargs_ptrn2);
+		process_ptrnargs(ptrnvsptrn->ptrn1, ptrnvsptrn->ptrnargstr1, &cmdargs_ptrn1, my_mpi_rank);
+		process_ptrnargs(ptrnvsptrn->ptrn2, ptrnvsptrn->ptrnargstr2, &cmdargs_ptrn2, my_mpi_rank);
 
 		/* If both process_ptrnargs lines returned successfully and we run at this line,
 		 * both ptrn1 and ptrn2 have been provided with a correct ptrnarg (if any). Add
@@ -577,7 +587,8 @@ static void process_ptrnargs(IN char *ptrn,
 	return;
 
 exit:
-	fprintf(stderr, "ERROR: Could not allocate memory\n");
+	if (my_mpi_rank == 0)
+		fprintf(stderr, "ERROR: Could not allocate memory\n");
 	exit(EXIT_FAILURE);
 }
 
@@ -586,14 +597,16 @@ exit:
  * checks and is called once in the beginning of the driver.cpp file,
  * right after the cmdline_parser has been called.
  */
-void perform_sanity_checks_in_args(IN OUT cmdargs_t *cmdargs) {
+void perform_sanity_checks_in_args(IN OUT cmdargs_t *cmdargs,
+                                   IN int my_mpi_rank) {
 
 	char *ptrn = cmdargs->args_info.ptrn_arg;
 	char *ptrnarg = cmdargs->args_info.ptrnarg_arg;
 
 	if (strcmp(cmdargs->args_info.part_subset_arg, "none") != 0) {
 		if (strcmp(ptrn, "ptrnvsptrn") != 0) {
-			fprintf(stderr, "ERROR: The 'part_subset' option can only be used with 'ptrnvsptrn' pattern.\n");
+			if (my_mpi_rank == 0)
+				fprintf(stderr, "ERROR: The 'part_subset' option can only be used with 'ptrnvsptrn' pattern.\n");
 			exit(EXIT_FAILURE);
 		}
 	}
@@ -605,12 +618,12 @@ void perform_sanity_checks_in_args(IN OUT cmdargs_t *cmdargs) {
 	     strcmp(ptrn, "receivers") == 0 ||
 	     strcmp(ptrn, "ptrnvsptrn") == 0) &&
 	        ptrnarg == NULL)
-		print_ptrnarg_help(ptrn, NULL, true);
+		print_ptrnarg_help(ptrn, NULL, my_mpi_rank, true);
 
 	/* Ensure that if a pattern argument is provided, it has been
 	 * provided in the correct format/type needed by the chosen pattern */
 	if (ptrnarg != NULL)
-		process_ptrnargs(ptrn, ptrnarg, cmdargs);
+		process_ptrnargs(ptrn, ptrnarg, cmdargs, my_mpi_rank);
 }
 
 /**
