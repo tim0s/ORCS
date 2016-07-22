@@ -258,12 +258,11 @@ void print_histogram(FILE *fd) {
 		if (gsl_histogram_increment(h, acc_bandwidths.at(count)) != 0) {
 			printf("Moo\n");
 			printf("%f\n", acc_bandwidths.at(count));
-			exit(1);
+			exit(EXIT_FAILURE);
 		}
 	}
 	gsl_histogram_fprintf(fd, h, "%12.8f", "%5.0f");
 	gsl_histogram_free(h);
-	std::cout << acc_bandwidths.size() << "\n";
 }
 
 void print_raw_data(FILE *fd) {
