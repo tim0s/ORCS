@@ -440,11 +440,11 @@ void find_route(uroute_t *route, std::string n1, std::string n2) {
 			//printf("considering edge %s with comment %s\n", agnameof(e), agget(e, ((char *) "comment")));
 			if (contains_target(agget(e, ((char *) "comment")), (char *) n2.c_str())) {
 				//printf("Using edge: %s\n", agnameof(e));
-				theMap_returnval = theMap.insert( std::make_pair( agnameof(aghead(e)), 1 ) );
+				theMap_returnval = theMap.insert( std::make_pair(agnameof(aghead(e)), 1));
 				if (theMap_returnval.second == false) {
 					printf("I tried to visit a node I already visited on the same route. This means we have a routing loop!\n");
 					FILE *fderr = fopen("routing_loops.txt", "a");
-					if (fderr == NULL) {printf("Eeeek!\n"); exit(1);}
+					if (fderr == NULL) { printf("Eeeek!\n"); exit(EXIT_FAILURE); }
 					fprintf(fderr, "%s -> %s\n", agnameof(start), agnameof(dest));
 					fclose(fderr);
 					route->erase( route->begin(), route->end());
@@ -790,7 +790,7 @@ void insert_route_into_cable_cong_map(cable_cong_map_t *cable_cong, uroute_t *ro
 	for (iter_route = route->begin(); iter_route != route->end(); iter_route++) {
 		std::pair<cable_cong_map_t::iterator, bool> ret;
 
-		ret = cable_cong->insert(std::make_pair(*iter_route, 1 ) );
+		ret = cable_cong->insert(std::make_pair(*iter_route, 1));
 		if (ret.second == false) {
 			ret.first->second = ret.first->second + 1;
 		}
@@ -871,7 +871,7 @@ void get_max_congestion(uroute_t *route, cable_cong_map_t *cable_cong, int *weig
 		it = cable_cong->find(*route_iter);
 		if (it == cable_cong->end()) {
 			printf("There has been a serious error: Route contained entry not in cable_cong\n");
-			exit(1);
+			exit(EXIT_FAILURE);
 		}
 		if (loc_weight < it->second) {
 			loc_weight = it->second;
