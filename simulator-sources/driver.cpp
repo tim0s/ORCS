@@ -69,11 +69,23 @@ int main(int argc, char *argv[]) {
 	/* Read the complete namelist and store it in a temporary vector */
 	get_namelist_from_graph(&complete_namelist);
 
+	/* The command line argument sanity checks "should" be placed in the cmdline_extended.cpp
+	 * but here we need the get_namelist_from_graph to run first in order to perform the sanity
+	 * check for the commsize and part_commsize, that is why we have these two here:
+	 *
+	 * Check that we have a sane commsize */
 	if (cmdargs.args_info.commsize_arg == 0) {
 		cmdargs.args_info.commsize_arg = complete_namelist.size() - complete_namelist.size() % 2;
 	} else if (cmdargs.args_info.commsize_arg > complete_namelist.size()) {
-		printf("You chose a very large 'commsize'.\n"
-		       "The maximum possible communication size is %d\n", complete_namelist.size());
+		fprintf(stderr, "ERROR: You chose a very large 'commsize'.\n"
+		       "       The maximum possible communication size is %d\n", complete_namelist.size());
+		exit(EXIT_FAILURE);
+	}
+
+	/* Check that the part_commsize is always smaller than commsize */
+	if (cmdargs.args_info.part_commsize_arg >= cmdargs.args_info.commsize_arg) {
+		fprintf(stderr, "ERROR: 'part_commsize' should always be smaller than 'commsize'.\n"
+		        "       The maximum possible part_commsize is %d\n", cmdargs.args_info.commsize_arg - 1);
 		exit(EXIT_FAILURE);
 	}
 
@@ -212,13 +224,20 @@ int main(int argc, char *argv[]) {
 
 	/* If the user has provided a nodeorder guid list we may need to modify the namelist */
 	if (nodeorder_guidlist.size()) {
-		/* Get the complete GUID list */
+		/* Get the complete numeric GUID list */
 		get_guidlist_from_namelist(&complete_namelist, &complete_guidlist);
 
-		/* Get the shuffled GUID list */
+		/* Get the shuffled numeric GUID list */
 		get_guidlist_from_namelist(&namelist, &guidlist);
 
-		/* First remove the nodeorder guids that do not exist in the shuffle_namelist */
+		/** We use the numeric GUID lists for the comparisons, because the
+		 *  nodeorder_guidlist is already in anumeric format. */
+
+		/* First remove the nodeorder guids that do not exist in the shuffled namelist.
+		 * For example, if the user asks for the nodeorder of GUIDs 0x100, 0x2, 0x10, 0x1
+		 * but GUID 0x100 do not exist at all in the shuffled namelist/guidlist (either
+		 * mistake from the user, or the user is using a subset and GUID 0x100 is not
+		 * part of that subset), then we need to remove 0x100 from this list. */
 		bool found;
 		std::vector<unsigned long long>::iterator ull_iter;
 		for (ull_iter = nodeorder_guidlist.begin(); ull_iter != nodeorder_guidlist.end(); ) {
@@ -237,9 +256,15 @@ int main(int argc, char *argv[]) {
 				ull_iter++;
 		}
 
+		/* Convert the nodeordered guidlist back to an ordered namelist. Now we are sure that
+		 * all of the nodeorder_namelist entries exist in the namelist that we are going to
+		 * shuffle. */
 		get_namelist_from_guidlist(&nodeorder_guidlist, &complete_namelist, &nodeorder_namelist);
 
-		/* Then remove from the namelist the nodenames that exist in the nodeorder_guidlist */
+		/* Then remove from the namelist (namelist is the list we are going to shuffle) the
+		 * nodenames that exist in the nodeorder_guidlist. We will re-add the removed entries
+		 * in the "final_namelist", but after the shuffling of the "namelist" has occured
+		 * (that's how we ensure the node-ordering). */
 		std::vector<std::string>::iterator str_iter;
 		for (str_iter = namelist.begin(); str_iter != namelist.end(); ) {
 			found = false;

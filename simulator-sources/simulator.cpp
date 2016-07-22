@@ -1182,10 +1182,10 @@ void exchange_results2(int mynode, int allnodes) {
 }
 
 void generate_namelist_by_name(char *method, namelist_t *namelist, int comm_size) {
-	if (strcmp(method, "rand") == 0) {generate_random_namelist(namelist, comm_size);}
-	if (strcmp(method, "linear_bfs") == 0) {generate_linear_namelist_bfs(namelist, comm_size);}
-	if (strcmp(method, "guid_order_asc") == 0) {generate_linear_namelist_guid_order(namelist, comm_size);}
-	if (strcmp(method, "guid_order_desc") == 0) {generate_linear_namelist_guid_order(namelist, comm_size, false);}
+	if (strcmp(method, "rand") == 0) { generate_random_namelist(namelist, comm_size); }
+	if (strcmp(method, "linear_bfs") == 0) { generate_linear_namelist_bfs(namelist, comm_size); }
+	if (strcmp(method, "guid_order_asc") == 0) { generate_linear_namelist_guid_order(namelist, comm_size); }
+	if (strcmp(method, "guid_order_desc") == 0) { generate_linear_namelist_guid_order(namelist, comm_size, false); }
 }
 
 /* quick and dirty allreduce for maps<int,int> where the maximum key is

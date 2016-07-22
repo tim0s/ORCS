@@ -591,8 +591,9 @@ void perform_sanity_checks_in_args(IN OUT cmdargs_t *cmdargs) {
 	char *ptrn = cmdargs->args_info.ptrn_arg;
 	char *ptrnarg = cmdargs->args_info.ptrnarg_arg;
 
-	/* First check the pattern name, and if it needs a mandatory
-	 * pattern argument that hasn't been provided, warn and exit. */
+	/* Check the pattern name, and if the chosen pattern needs a
+	 * mandatory pattern argument that hasn't been provided, warn
+	 * and exit. */
 	if ((strcmp(ptrn, "neighbor") == 0 ||
 	     strcmp(ptrn, "receivers") == 0 ||
 	     strcmp(ptrn, "ptrnvsptrn") == 0) &&
