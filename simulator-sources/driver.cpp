@@ -55,7 +55,8 @@ int main(int argc, char *argv[]) {
 
 			level++; //proceed to next level
 		}
-		std::cout << "The given input configuration would result in a " << level << " level simulation." << std::endl;
+		if (mynode == 0)
+			printf("The given input configuration would result in a %d-level simulation.\n", level);
 		return level;
 	}
 

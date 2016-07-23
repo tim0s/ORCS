@@ -903,7 +903,8 @@ void my_mpi_init(int *argc, char **argv[], int *rank, int *comm_size) {
 	MPI_Comm_size(MPI_COMM_WORLD, comm_size);
 	MPI_Comm_rank(MPI_COMM_WORLD, rank);
 
-	recvbuf = (int *) malloc(*comm_size * sizeof(*rank));
+	if (*rank == 0)
+		recvbuf = (int *) malloc(*comm_size * sizeof(*rank));
 
 	MPI_Gather(rank, 1, MPI_INT, recvbuf, 1, MPI_INT, 0, MPI_COMM_WORLD);
 	if (*rank == 0) {
@@ -913,6 +914,8 @@ void my_mpi_init(int *argc, char **argv[], int *rank, int *comm_size) {
 		for (i = 1; i < *comm_size; i++)
 			printf("Hello from MPI node with rank '%d' (%d/%d)\n",
 			       recvbuf[i], recvbuf[i] + 1, * comm_size);
+
+		free(recvbuf);
 	}
 }
 
