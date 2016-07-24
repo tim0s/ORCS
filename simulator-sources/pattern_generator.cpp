@@ -24,6 +24,7 @@
 #include <boost/assign/std/vector.hpp>
 #include "pattern_generator.hpp"
 #include "simulator.hpp"
+#include <mpi.h>
 
 template< class T >
 struct next
@@ -276,25 +277,26 @@ void genptrn_nneighbor(int nprocs, int level, int neighbors,
 	}
 
 	int *tmpedges= (int *)malloc(sizeof(int*)*nprocs*neighbors);
-	for(int i = 0; i < nprocs * neighbors; i++) tmpedges[i] = -1;
+	int i;
+	for(i = 0; i < nprocs * neighbors; i++) tmpedges[i] = -1;
 
 	/* go over all procs and neighbors for this proc and find a proc
 	 * right of it with a free neighbor slot. Fill this slot and go to
 	 * next free neighbor slot. Peer up from left to right. This might
 	 * leave to empty slots (MPI_PROC_NULL). */
-	for(int i=0;i<nprocs;i++) {
+	for(i = 0; i < nprocs; i++) {
 		int nei;
-		for(nei=0;nei<neighbors;nei++) {
-			int ind=i*neighbors + nei;
+		for(nei = 0; nei < neighbors; nei++) {
+			int ind = i * neighbors + nei;
 			/* if this has not a neighbor yet */
 			if(tmpedges[ind] == -1) {
-				int found = 0,k,l;
+				int found = 0, k, l;
 				/* find peer process */
-				for(int k=i+1; k<nprocs;k++) {
+				for(k = i + 1; k < nprocs; k++) {
 					/* check if there is a connection to this process already */
 					int foundme=0;
 					for(int l=0;l<neighbors;l++) {
-						int remind = k*neighbors+l;
+						int remind = k * neighbors + l;
 						if(tmpedges[remind] == i)
 							foundme = 1;
 					}
@@ -302,9 +304,9 @@ void genptrn_nneighbor(int nprocs, int level, int neighbors,
 					if(foundme) continue;
 
 					/* see if there any any empty slots in peer process */
-					for(int l=0;l<neighbors;l++) {
+					for(l = 0; l < neighbors; l++) {
 
-						int remind = k*neighbors+l;
+						int remind = k * neighbors + l;
 						if(tmpedges[remind] == -1 && !found) {
 							tmpedges[ind] = k;
 							tmpedges[remind] = i;
@@ -406,9 +408,7 @@ void genptrn_nreceivers_with_chance(int comm_size, int level, int num_receivers,
 	std::vector<int> receivers_bucket;
 	std::vector<int> non_receivers_bucket;
 	std::vector<int> available_src_nodes_bucket;
-	int receiver, i, src, dst;
-	int myrand_pos;
-	double dice;
+	int receiver, i;
 
 	/* Initialize the available_nodes_bucket vector with values from 0 to comm_size - 1
 	 * Then we will use this vector to pull first i receivers and random source nodes that
@@ -432,6 +432,9 @@ void genptrn_nreceivers_with_chance(int comm_size, int level, int num_receivers,
 	 * If dice <= chance_to_communicate_with_a_receiver. Otherwise, communicate with a
 	 * random node. */
 	for (i = 0; available_src_nodes_bucket.size() > 0; i++) {
+		int src, dst, myrand_pos;
+		double dice;
+
 		receiver = receivers_bucket.at(i % num_receivers);
 		dst = receiver;
 		myrand_pos = mtrand.randInt(available_src_nodes_bucket.size() - 1);
@@ -550,6 +553,8 @@ void genptrn_by_name(ptrn_t *ptrn, char *ptrnname, void *ptrnarg, int comm_size,
 	else {
 		if (my_mpi_rank == 0)
 			printf("ERROR: %s pattern not implemented\n", ptrnname);
+
+		MPI_Finalize();
 		exit(EXIT_FAILURE);
 	}
 }

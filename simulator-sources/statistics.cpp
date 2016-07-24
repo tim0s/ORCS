@@ -256,11 +256,10 @@ double get_max_error(double quantile) {
 
 double get_acc_bandwidth(bucket_t *bucket) {
 
-	int count;
-	double sum=0;
-	double res=0;
-
 	if (bucket->size() != 0) {
+		int count;
+		double sum = 0, res = 0;
+
 		assert(bucket->at(0) == 0);
 		for (count=1; count<bucket->size(); count++) {
 			if (bucket->at(count) > 0) {

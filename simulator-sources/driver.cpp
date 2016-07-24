@@ -138,29 +138,29 @@ int main(int argc, char *argv[]) {
 
 	/* Get a list of all endpoint-names that we will work with from the dot-file
 	 * This list, the namelist, may be a subset of the complete list. */
-	if (mynode == 0) {
+	if (mynode == 0)
 		generate_namelist_by_name(cmdargs.args_info.subset_arg, &namelist,
 		                          cmdargs.args_info.commsize_arg);
 
-		/* If the part_subset_art is not "none", we need to process the part_subset */
-		if (strcmp(cmdargs.args_info.part_subset_arg, "none") != 0) {
-			/* The part_subset_arg can be 'linear_bfs' ONLY if the subset_arg is
-			 * 'linear_bfs' as well. */
-			if (strcmp(cmdargs.args_info.part_subset_arg, "linear_bfs") == 0 &&
-			        strcmp(cmdargs.args_info.subset_arg, "linear_bfs") != 0) {
-				if (mynode == 0)
-					fprintf(stderr, "ERROR: 'part_subset' can be 'linear_bfs' only if 'subset' is 'linear_bfs' as well.\n");
-				MPI_Finalize();
-				exit(EXIT_FAILURE);
-			}
-
-			/* Choose the part_subset from the namelist and store in the part_namelist */
-			generate_namelist_by_name(cmdargs.args_info.part_subset_arg, &part_namelist,
-									  cmdargs.args_info.part_commsize_arg, &namelist);
+	/* If the part_subset_art is not "none", we need to process the part_subset */
+	if (strcmp(cmdargs.args_info.part_subset_arg, "none") != 0) {
+		/* The part_subset_arg can be 'linear_bfs' ONLY if the subset_arg is
+		 * 'linear_bfs' as well. */
+		if (strcmp(cmdargs.args_info.part_subset_arg, "linear_bfs") == 0 &&
+				strcmp(cmdargs.args_info.subset_arg, "linear_bfs") != 0) {
+			if (mynode == 0)
+				fprintf(stderr, "ERROR: 'part_subset' can be 'linear_bfs' only if 'subset' is 'linear_bfs' as well.\n");
+			MPI_Finalize();
+			exit(EXIT_FAILURE);
 		}
+
+		/* Choose the part_subset from the namelist and store in the part_namelist */
+		if (mynode == 0)
+			generate_namelist_by_name(cmdargs.args_info.part_subset_arg, &part_namelist,
+			                          cmdargs.args_info.part_commsize_arg, &namelist);
 	}
 
-	/* Distribute namelist and part_namelist from root to all nodes */
+	/* Distribute namelist, part_namelist and nodeorder_guidlist from root to all nodes */
 	bcast_namelist(&namelist, mynode);
 	if (strcmp(cmdargs.args_info.part_subset_arg, "none") != 0)
 		bcast_namelist(&part_namelist, mynode);
@@ -234,7 +234,7 @@ int main(int argc, char *argv[]) {
 		if(allnodes > 1) allreduce_contig_int_map(&bins);
 
 		if(mynode == 0) {
-			printf("gmin: %i, gmax: %i\n", gmin, gmax);
+			printf("gmin: %u, gmax: %u\n", gmin, gmax);
 
 			// erase 0
 			bins[0] = 0;

@@ -609,8 +609,6 @@ void generate_random_namelist(OUT namelist_t *namelist,
 	MTRand mtrand;
 	namelist_t tmp_namelist;
 	int counter;
-	int pos;
-	int myrand;
 
 	/* If a namelist_pool is provided, read the name list from the
 	 * namelist_pool. Otherwise, read from the agraph file */
@@ -622,8 +620,8 @@ void generate_random_namelist(OUT namelist_t *namelist,
 	std::vector<bool> bucket(tmp_namelist.size(), false);
 	
 	for (counter=1; counter <= comm_size; counter++) {
-		myrand = mtrand.randInt(tmp_namelist.size() - counter);
-		pos=0;
+		int myrand = mtrand.randInt(tmp_namelist.size() - counter);
+		int pos = 0;
 		while (true) {
 			if (bucket[pos] == false) {
 				if (myrand == 0) {
@@ -681,7 +679,6 @@ void generate_linear_namelist_guid_order(OUT namelist_t *namelist,
 
 	namelist_t tmp_namelist;
 	guidlist_t guids, sorted_guids;
-	unsigned long long curr_guid;
 	int counter, pos;
 
 	/* If a namelist_pool is provided, read the namelist from the namelist_pool.
@@ -711,7 +708,7 @@ void generate_linear_namelist_guid_order(OUT namelist_t *namelist,
 	for (counter=0; counter < comm_size; counter++) {
 		/* Use the curr_guid from the 'sorted_guids' vector as the guid
 		 * that needs to be matched and pushed in the namelist vector. */
-		curr_guid = sorted_guids.at(counter);
+		unsigned long long curr_guid = sorted_guids.at(counter);
 		for(pos = 0; pos < tmp_namelist.size(); pos++) {
 			/* Iterate through the temporary namelist vector */
 			if (curr_guid == guids.at(pos)) {
@@ -734,10 +731,10 @@ void shuffle_namelist(namelist_t *namelist) {
 	std::vector<bool> bucket(namelist->size(), false);
 	namelist_t shuffled_list;
 	MTRand mtrand;
-	int myrand;
+	int counter;
 
-	for (int counter=1; counter <= namelist->size(); counter++) {
-		myrand = mtrand.randInt(namelist->size() - counter);
+	for (counter = 1; counter <= namelist->size(); counter++) {
+		int myrand = mtrand.randInt(namelist->size() - counter);
 		int pos=0;
 		while (true) {
 			if (bucket[pos] == false) {
@@ -802,7 +799,7 @@ void get_max_congestion(uroute_t *route, cable_cong_map_t *cable_cong, int *weig
 }
 
 void my_mpi_init(int *argc, char **argv[], int *rank, int *comm_size) {
-	int *recvbuf_id, i, name_len;
+	int *recvbuf_id, name_len;
 	char processor_name[MPI_MAX_PROCESSOR_NAME], *recvbuf_proc_name;
 
 	MPI_Init(argc, argv);
@@ -824,6 +821,8 @@ void my_mpi_init(int *argc, char **argv[], int *rank, int *comm_size) {
 	           0, MPI_COMM_WORLD);
 
 	if (*rank == 0) {
+		int i;
+
 		printf("Total MPI nodes participating in the simulation: '%d'\n", *comm_size);
 		printf("Hello from Master MPI node '%s' with rank '%d' (%d/%d)\n",
 		       recvbuf_proc_name, *rank, *rank + 1, * comm_size);
@@ -914,7 +913,6 @@ exit:
 }
 
 void tag_edges(Agraph_t *mygraph) {
-	Agedge_t *e;
 	Agnode_t *n;
 	int id_cnt;
 	char edge_id[64];
@@ -923,7 +921,7 @@ void tag_edges(Agraph_t *mygraph) {
 	agattr(mygraph, AGEDGE, (char *) "edge_id", (char *) "");
 	n = agfstnode(mygraph);
 	while (n != NULL) {
-		e = agfstout(mygraph, n);
+		Agedge_t *e = agfstout(mygraph, n);
 		while (e != NULL) {
 			sprintf(edge_id, "%d", id_cnt);
 			id_cnt++;
@@ -984,7 +982,6 @@ void read_node_ordering(IN char *filename,
 
 void write_graph_with_congestions() {
 
-	Agedge_t *e;
 	Agnode_t *n;
 	char cong_str[64];
 	char color_str[128];
@@ -993,7 +990,7 @@ void write_graph_with_congestions() {
 	agattr(mygraph, AGEDGE, (char *) "color", (char *) "");
 	n = agfstnode(mygraph);
 	while (n != NULL) {
-		e = agfstout(mygraph, n);
+		Agedge_t *e = agfstout(mygraph, n);
 		while (e != NULL) {
 			char *eid = agget(e, (char *) "edge_id");
 			float cong = get_congestion_by_edgeid(atoi(eid));
@@ -1043,11 +1040,13 @@ void bcast_guidlist(guidlist_t *guidlist, int my_mpi_rank) {
 }
 
 void bcast_namelist(namelist_t *namelist, int my_mpi_rank) {
-	int count = 0, i;
+	int count = 0;
 	char *buffer;
 	
 	/* Pack buffer on rank 0 */
 	if(my_mpi_rank == 0) {
+		int i;
+
 		for (i = 0; i < namelist->size(); i++) {
 			count += strlen(namelist->at(i).c_str()) + 1;
 		}
@@ -1122,8 +1121,8 @@ void print_results(cmdargs_t *cmdargs, int mynode, int allnodes) {
 
 			fd = fopen(filename, "w");
 			if (fd == NULL) {
-				std::cout << "Could not open output file " << filename << std::endl << std::flush;
-				exit(EXIT_FAILURE);
+				printf("Could not open output file '%s'\n", filename);
+				MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
 			}
 			else {
 				print_commandline_options(fd, cmdargs);
