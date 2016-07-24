@@ -40,9 +40,12 @@ int main(int argc, char *argv[]) {
 
 	my_mpi_init(&argc, &argv, &mynode, &allnodes);
 
-	if (cmdline_parser(argc, argv, &cmdargs.args_info) != 0) exit(EXIT_FAILURE);
+	if (cmdline_parser(argc, argv, &cmdargs.args_info) != 0) {
+		MPI_Finalize();
+		exit(EXIT_FAILURE);
+	}
 	perform_sanity_checks_in_args(&cmdargs, mynode);
-	
+
 	if (cmdargs.args_info.getnumlevels_given) {
 		int level = 0;
 		while (1) {
@@ -82,6 +85,7 @@ int main(int argc, char *argv[]) {
 			fprintf(stderr, "ERROR: The dot file you provided contains the less than four hosts.\n"
 				    "       The simulator needs at least four hosts to run\n"
 					"");
+		MPI_Finalize();
 		exit(EXIT_FAILURE);
 
 	} else if (cmdargs.args_info.commsize_arg == 0) {
@@ -94,6 +98,7 @@ int main(int argc, char *argv[]) {
 		if (mynode == 0)
 			fprintf(stderr, "ERROR: The communicator size (commsize) should be a number between '%d' and '%d'\n"
 				    "       You provided '%d'.\n", 4, complete_namelist.size(), cmdargs.args_info.commsize_arg);
+		MPI_Finalize();
 		exit(EXIT_FAILURE);
 
 	}
@@ -104,6 +109,7 @@ int main(int argc, char *argv[]) {
 		if (mynode == 0)
 			fprintf(stderr, "ERROR: The first-part communicator size (part_commsize) should be a number between '%d' and '%d'\n"
 				    "       You provided '%d'.\n", 2, cmdargs.args_info.commsize_arg - 1, cmdargs.args_info.part_commsize_arg);
+		MPI_Finalize();
 		exit(EXIT_FAILURE);
 	}
 
@@ -144,6 +150,7 @@ int main(int argc, char *argv[]) {
 			        strcmp(cmdargs.args_info.subset_arg, "linear_bfs") != 0) {
 				if (mynode == 0)
 					fprintf(stderr, "ERROR: 'part_subset' can be 'linear_bfs' only if 'subset' is 'linear_bfs' as well.\n");
+				MPI_Finalize();
 				exit(EXIT_FAILURE);
 			}
 

@@ -918,6 +918,7 @@ void my_mpi_init(int *argc, char **argv[], int *rank, int *comm_size) {
 	MPI_Gather(processor_name, MPI_MAX_PROCESSOR_NAME, MPI_CHAR,
 	           recvbuf_proc_name, MPI_MAX_PROCESSOR_NAME, MPI_CHAR,
 	           0, MPI_COMM_WORLD);
+
 	if (*rank == 0) {
 		printf("Total MPI nodes participating in the simulation: '%d'\n", *comm_size);
 		printf("Hello from Master MPI node '%s' with rank '%d' (%d/%d)\n",

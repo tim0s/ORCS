@@ -6,6 +6,7 @@
 #include "simulator.hpp"
 #include "cmdline.h"
 #include <regex.h>
+#include <mpi.h>
 
 /* --------------------------------------------------------------------------------
  * How the ptrnargs argument works.
@@ -224,6 +225,7 @@ static void print_ptrnarg_help(IN char *ptrn,
 	}
 
 	if (terminate_prog) {
+		MPI_Finalize();
 		if (error)
 			exit(EXIT_FAILURE);
 		else
@@ -251,6 +253,7 @@ static void process_ptrnargs(IN char *ptrn,
 	if (strlen(ptrnarg) > max_ptrn_size) {
 		if (my_mpi_rank == 0)
 			fprintf(stderr, "ERROR: The max accepted arg size for ptrn '%s' is %d\n", ptrn, max_ptrn_size);
+		MPI_Finalize();
 		exit(EXIT_FAILURE);
 	}
 
@@ -324,6 +327,7 @@ static void process_ptrnargs(IN char *ptrn,
 		if (ret) {
 			if (my_mpi_rank == 0)
 				fprintf(stderr, "Could not compile regex\n");
+			MPI_Finalize();
 			exit(EXIT_FAILURE);
 		}
 
@@ -443,6 +447,7 @@ static void process_ptrnargs(IN char *ptrn,
 		if (ret) {
 			if (my_mpi_rank == 0)
 				fprintf(stderr, "Could not compile regex\n");
+			MPI_Finalize();
 			exit(EXIT_FAILURE);
 		}
 
@@ -555,6 +560,7 @@ static void process_ptrnargs(IN char *ptrn,
 						printf("     %s\n", cmdline_parser_ptrn_values[i]);
 				}
 			}
+			MPI_Finalize();
 			exit(EXIT_FAILURE);
 		}
 
@@ -589,6 +595,7 @@ static void process_ptrnargs(IN char *ptrn,
 exit:
 	if (my_mpi_rank == 0)
 		fprintf(stderr, "ERROR: Could not allocate memory\n");
+	MPI_Finalize();
 	exit(EXIT_FAILURE);
 }
 
@@ -607,6 +614,7 @@ void perform_sanity_checks_in_args(IN OUT cmdargs_t *cmdargs,
 		if (strcmp(ptrn, "ptrnvsptrn") != 0) {
 			if (my_mpi_rank == 0)
 				fprintf(stderr, "ERROR: The 'part_subset' option can only be used with 'ptrnvsptrn' pattern.\n");
+			MPI_Finalize();
 			exit(EXIT_FAILURE);
 		}
 	}
