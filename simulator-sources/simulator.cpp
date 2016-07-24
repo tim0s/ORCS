@@ -832,7 +832,7 @@ void read_input_graph(char *filename, int my_mpi_rank) {
 					graph_bufsize += CHARBUF_INCREMENT_SIZE * sizeof(*graph_buffer);
 					tmp_realloc = (char *) realloc(graph_buffer, graph_bufsize);
 					if (tmp_realloc == NULL)
-						goto exitrealloc;
+						goto exitfree;
 					graph_buffer = tmp_realloc;
 				}
 				memcpy(graph_buffer + fsize, fgetsbuf, strlen(fgetsbuf));
@@ -850,7 +850,7 @@ void read_input_graph(char *filename, int my_mpi_rank) {
 			fd = fopen(filename, "r");
 			if (fd == NULL) {
 				fprintf(stderr, "ERROR: Could not open input file '%s'\n", filename);
-				MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+				goto exitfree;
 			}
 
 			/* Read the whole file at once in the buffer */
@@ -879,7 +879,7 @@ void read_input_graph(char *filename, int my_mpi_rank) {
 
 	return;
 
-exitrealloc:
+exitfree:
 	free(graph_buffer);
 exit:
 	fprintf(stderr, "ERROR: Could not allocate memory for graph_buffer\n");
