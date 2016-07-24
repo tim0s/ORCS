@@ -116,17 +116,13 @@ void get_namelist_from_guidlist(IN guidlist_t *guidlist,
 void get_namelist_from_graph(OUT namelist_t *namelist);
 void get_namelist_from_graph(OUT namelist_t *namelist,
                              OUT guidlist_t *guidlist);
-void generate_random_mapping(named_ptrn_t *mapping, ptrn_t *ptrn);
-void insert_route_into_uedgelist(used_edges_t *edge_list, route_t *route);
 std::string lookup(int nodenumber, namelist_t *namelist);
-void printmapping(named_ptrn_t *mapping);
 void my_mpi_init(int *argc, char ***argv, int *rank, int *comm_size);
 void read_input_graph(char *filename, int my_mpi_rank);
 void read_node_ordering(IN char *filename,
                         OUT guidlist_t *guidorder_list);
 void bcast_guidlist(guidlist_t *guidlist, int my_mpi_rank);
 void bcast_namelist(namelist_t *namelist, int my_mpi_rank);
-void exchange_results(int mynode, int allnodes, double result);
 void exchange_results2(int mynode, int allnodes);
 void insert_route_into_cable_cong_map(cable_cong_map_t *cable_cong, uroute_t *route);
 void get_max_congestion(uroute_t *route, cable_cong_map_t *cable_cong, int *weight);

@@ -442,14 +442,13 @@ int main(int argc, char *argv[]) {
 		if (run_count > ceil((double) cmdargs.args_info.num_runs_arg / (double) allnodes)) {break;}
 	}
 
-	//	simulation_with_metric(args_info.metric_arg, NULL, &namelist, ACCOUNT);
 	exchange_results_by_metric(cmdargs.args_info.metric_arg, mynode, allnodes);
 	print_results(&cmdargs, mynode, allnodes);
 
-	MPI_Finalize();
 	agclose(mygraph);
 
 	cleanup_args(cmdargs.args_info.ptrn_arg, cmdargs.ptrnarg);
 
+	MPI_Finalize();
 	return EXIT_SUCCESS;
 }

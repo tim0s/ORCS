@@ -602,53 +602,6 @@ void get_namelist_from_graph(OUT namelist_t *namelist,
 		get_guidlist_from_namelist(namelist, guidlist);
 }
 
-void generate_random_mapping(named_ptrn_t *mapping, ptrn_t *ptrn) {
-
-	MTRand mtrand;
-	std::vector<int> num_mapped;
-
-	namelist_t namelist;
-	get_namelist_from_graph(&namelist);
-
-	std::vector<bool> bucket(namelist.size(), false);
-	edge_t edge;
-	ptrn_t::iterator iter;
-	int counter;
-	int myrand;
-	int pos;
-
-	for (counter = 0; counter < namelist.size(); counter++) {
-		myrand = mtrand.randInt(namelist.size()-counter-1);
-		pos=0;
-		while (true) {
-			if (bucket[pos] == false) {
-				if (myrand == 0) {
-					bucket[pos] = true;
-					num_mapped.push_back(pos);
-					break;
-				}
-				myrand--;
-			}
-			pos++;
-		}
-	}
-	
-	mapping->clear();
-
-	for (iter = ptrn->begin(); iter != ptrn->end(); iter++) {
-		if ((iter->first >= namelist.size()) || (iter->second >= namelist.size())) {
-			printf("Error during mapping: The pattern contains more nodes (> %i) than\n", iter->first>iter->second?iter->first:iter->second);
-			printf("there are hosts in the graph (%i).\n", (int)namelist.size());
-			exit(EXIT_FAILURE);
-		}
-		else {
-			edge.first = namelist[num_mapped[iter->first]];
-			edge.second = namelist[num_mapped[iter->second]];
-			mapping->push_back(edge);
-		}
-	}
-}
-
 void generate_random_namelist(OUT namelist_t *namelist,
                               IN int comm_size,
                               IN namelist_t *namelist_pool) {
@@ -814,44 +767,6 @@ void insert_route_into_cable_cong_map(cable_cong_map_t *cable_cong, uroute_t *ro
 	}
 } 
 
-void insert_route_into_uedgelist(used_edges_t *edge_list, route_t *route) {
-
-	route_t::iterator iter_route;
-	used_edges_t::iterator iter_uedge;
-	bool found = false;
-
-	for (iter_route = route->begin(); iter_route != route->end(); iter_route++) {
-		for(iter_uedge = edge_list->begin(); iter_uedge != edge_list->end(); iter_uedge++) {
-			if (iter_uedge->edge == *iter_route) {
-				iter_uedge->usage++;
-
-				/* add the hosts using this link */
-				std::pair<std::string, std::string> pair;
-				pair.first = route->front().first;
-				pair.second= route->back().second;
-				iter_uedge->peers.push_back(pair);
-				
-				found = true;
-				break;
-			}
-		}
-		if (found == false) {
-			used_edge_t used_edge_entry;
-			used_edge_entry.edge = *iter_route;
-			used_edge_entry.usage = 1;
-
-			/* add the hosts using this link */
-			std::pair<std::string, std::string> pair;
-			pair.first = route->front().first;
-			pair.second= route->back().second;
-			used_edge_entry.peers.push_back(pair);
-			
-			edge_list->push_back(used_edge_entry);
-		}
-		found = false;
-	}
-}
-
 std::string lookup(int nodenumber, namelist_t *namelist) {
 	namelist_t::iterator iter;
 	int counter = 0;
@@ -862,17 +777,6 @@ std::string lookup(int nodenumber, namelist_t *namelist) {
 	}
 
 	return *iter;
-}
-
-void printmapping(named_ptrn_t *mapping) {
-
-	named_ptrn_t::iterator iter;
-
-	printf("   Mapping   \n=============\n");
-	for(iter = mapping->begin(); iter != mapping->end(); iter++) {
-		printf("%s -> %s\n", iter->first.c_str(), iter->second.c_str());
-	}
-	printf("=============\n\n");
 }
 
 void get_max_congestion(uroute_t *route, cable_cong_map_t *cable_cong, int *weight) {
@@ -935,7 +839,7 @@ void my_mpi_init(int *argc, char **argv[], int *rank, int *comm_size) {
 
 void read_input_graph(char *filename, int my_mpi_rank) {
 	FILE *fd;
-	char *graph_buffer;
+	char *graph_buffer, *tmp_realloc;
 	unsigned long fsize = 0;
 
 	if (my_mpi_rank == 0) {
@@ -945,13 +849,18 @@ void read_input_graph(char *filename, int my_mpi_rank) {
 			int graph_bufsize = CHARBUF_INCREMENT_SIZE * sizeof(*graph_buffer);
 			char fgetsbuf[READCHAR_BUFFER];
 			graph_buffer = (char *) calloc(CHARBUF_INCREMENT_SIZE, sizeof(*graph_buffer));
+			if (graph_buffer == NULL)
+				goto exit;
 			fd = stdin;
 
 			while(fgets(fgetsbuf, READCHAR_BUFFER, fd)) { /* Read until EOF */
 				if ((fsize + strlen(fgetsbuf) + 1) >= graph_bufsize) {
 					/* Increase the graph_buffer size */
 					graph_bufsize += CHARBUF_INCREMENT_SIZE * sizeof(*graph_buffer);
-					graph_buffer = (char *) realloc(graph_buffer, graph_bufsize);
+					tmp_realloc = (char *) realloc(graph_buffer, graph_bufsize);
+					if (tmp_realloc == NULL)
+						goto exitrealloc;
+					graph_buffer = tmp_realloc;
 				}
 				memcpy(graph_buffer + fsize, fgetsbuf, strlen(fgetsbuf));
 				fsize += strlen(fgetsbuf);
@@ -962,11 +871,13 @@ void read_input_graph(char *filename, int my_mpi_rank) {
 			stat(filename, &st);
 			fsize =	st.st_size;
 			graph_buffer = (char *) malloc(fsize * sizeof(*graph_buffer));
+			if (graph_buffer == NULL)
+				goto exit;
 
 			fd = fopen(filename, "r");
 			if (fd == NULL) {
 				fprintf(stderr, "ERROR: Could not open input file '%s'\n", filename);
-				exit(EXIT_FAILURE);
+				MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
 			}
 
 			/* Read the whole file at once in the buffer */
@@ -979,8 +890,11 @@ void read_input_graph(char *filename, int my_mpi_rank) {
 
 	/* bcast buffer size */
 	MPI_Bcast(&fsize, 1, MPI_UNSIGNED_LONG, 0, MPI_COMM_WORLD);
-	if(my_mpi_rank != 0)
+	if(my_mpi_rank != 0) {
 		graph_buffer = (char *)malloc(fsize * sizeof(*graph_buffer));
+		if (graph_buffer == NULL)
+			goto exit;
+	}
 
 	/* bcast buffer data */
 	MPI_Bcast(graph_buffer, fsize, MPI_CHAR, 0, MPI_COMM_WORLD);
@@ -989,6 +903,14 @@ void read_input_graph(char *filename, int my_mpi_rank) {
 	mygraph = agmemread(graph_buffer);
 
 	free(graph_buffer);
+
+	return;
+
+exitrealloc:
+	free(graph_buffer);
+exit:
+	fprintf(stderr, "ERROR: Could not allocate memory for graph_buffer\n");
+	MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
 }
 
 void tag_edges(Agraph_t *mygraph) {
@@ -1089,46 +1011,6 @@ void write_graph_with_congestions() {
 		n = agnxtnode(mygraph, n);
 	}
 	agwrite(mygraph, stdout);
-}
-
-void send_namelist(namelist_t *namelist, int comm_size) {
-
-	int count = 0;
-	char *buffer;
-	
-	for (int i=0; i<namelist->size(); i++) {
-		count += strlen(namelist->at(i).c_str()) + 1;
-	}
-
-	buffer = (char *) malloc(count * sizeof(char));
-	char *pos = buffer;
-	for (int i=0; i<namelist->size(); i++) {
-		strcpy(pos, namelist->at(i).c_str());
-		pos += strlen(namelist->at(i).c_str()) + 1;
-	}
-	for (int i=1; i<comm_size; i++) {
-		MPI_Send(&count, 1, MPI_INT, i, 0, MPI_COMM_WORLD); //size
-		MPI_Send(buffer, count, MPI_CHAR, i, 0, MPI_COMM_WORLD); //data
-	}
-	free(buffer);
-}
-
-void recieve_namelist(namelist_t *namelist) {
-	
-	int size;
-	char *buffer;
-	char *pos;
-	MPI_Status status;
-
-	namelist->clear();
-	MPI_Recv(&size, 1, MPI_INT, 0, 0, MPI_COMM_WORLD, &status);
-	buffer = (char *) malloc(size * sizeof(char));
-	MPI_Recv(buffer, size, MPI_CHAR, 0, 0, MPI_COMM_WORLD, &status);
-	pos = buffer;
-	while (pos < buffer + size) {
-		namelist->push_back(pos);
-		pos += namelist->back().length() + 1;
-	}
 }
 
 void bcast_guidlist(guidlist_t *guidlist, int my_mpi_rank) {
@@ -1252,18 +1134,6 @@ void print_results(cmdargs_t *cmdargs, int mynode, int allnodes) {
 				if (strcmp(cmdargs->args_info.metric_arg, "get_cable_cong") == 0) {print_cable_cong(fd);}
 				fclose(fd);
 			}
-		}
-	}
-}
-
-void exchange_results(int mynode, int allnodes, double result) {
-	
-	MPI_Send(&result, 1, MPI_DOUBLE, 0, 0, MPI_COMM_WORLD);
-	if (mynode == 0) {
-		for (int p=0; p<allnodes; p++) {
-			MPI_Status status;
-			MPI_Recv(&result, 1, MPI_DOUBLE, MPI_ANY_SOURCE, 0, MPI_COMM_WORLD, &status);
-			account_stats_max_congestions(result);
 		}
 	}
 }

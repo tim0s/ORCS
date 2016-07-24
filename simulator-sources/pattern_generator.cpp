@@ -270,15 +270,18 @@ void genptrn_nneighbor(int nprocs, int level, int neighbors,
 
 	if(neighbors > nprocs-1) {
 		neighbors = nprocs-1;
-		printf("#*** correcting neighbor number to %i (commsize: %i)\n", neighbors, nprocs);
+		print_once(respect_print_once,
+		           "#*** correcting neighbor number to %i (commsize: %i)\n",
+		           neighbors, nprocs);
 	}
-	int *indexes = (int*)malloc(sizeof(int)*nprocs);
-	int *tmpedges= (int*)malloc(sizeof(int*)*nprocs*neighbors);
-	for(int i=0;i<nprocs*neighbors; i++) tmpedges[i] = -1;
+
+	int *tmpedges= (int *)malloc(sizeof(int*)*nprocs*neighbors);
+	for(int i = 0; i < nprocs * neighbors; i++) tmpedges[i] = -1;
+
 	/* go over all procs and neighbors for this proc and find a proc
-   * right of it with a free neighbor slot. Fill this slot and go to
-   * next free neighbor slot. Peer up from left to right. This might
-   * leave to empty slots (MPI_PROC_NULL). */
+	 * right of it with a free neighbor slot. Fill this slot and go to
+	 * next free neighbor slot. Peer up from left to right. This might
+	 * leave to empty slots (MPI_PROC_NULL). */
 	for(int i=0;i<nprocs;i++) {
 		int nei;
 		for(nei=0;nei<neighbors;nei++) {
@@ -292,26 +295,29 @@ void genptrn_nneighbor(int nprocs, int level, int neighbors,
 					int foundme=0;
 					for(int l=0;l<neighbors;l++) {
 						int remind = k*neighbors+l;
-						if(tmpedges[remind] == i) {
+						if(tmpedges[remind] == i)
 							foundme = 1;
-						}
 					}
 					/* if there is a connection already - go to next possible peer */
 					if(foundme) continue;
 
 					/* see if there any any empty slots in peer process */
 					for(int l=0;l<neighbors;l++) {
+
 						int remind = k*neighbors+l;
 						if(tmpedges[remind] == -1 && !found) {
 							tmpedges[ind] = k;
 							tmpedges[remind] = i;
 							found = 1;
-						} } } } } }
+						}
+					}
+				}
+			}
+		}
+	}
 
-	//int *edges= (int*)malloc(sizeof(int*)*nprocs*neighbors);
-	//for(int i=0;i<nprocs*neighbors; i++) edges[i] = -1;
 	/* now, the adjacency list still has MPI_PROC_NULLs (-1) :-/ ....
-   * filter them and arrange new array ... */
+	 * filter them and arrange new array ... */
 	int ind=0;
 	for(int i=0;i<nprocs;i++) {
 		for(int nei=0;nei<neighbors;nei++) {
@@ -324,27 +330,6 @@ void genptrn_nneighbor(int nprocs, int level, int neighbors,
 		}
 	}
 	free(tmpedges);
-
-	/*
-  int j=0;
-  for(int i=0;i<ind;i++) {
-	if(i == indexes[j]) { printf(" | "); j++; }
-	printf(" %i ", edges[i]);
-  }
-  free(edges);*/
-
-#if 0
-	/* erase double elements */
-	std::sort(ptrn->begin(), ptrn->end());
-	ptrn->erase(unique(ptrn->begin(), ptrn->end()), ptrn->end());
-
-	/* erase send to oneself */
-	ptrn_t::iterator iter;
-	for(iter = ptrn->begin(); iter != ptrn->end(); ) {
-		if(iter->first == iter->second) iter = ptrn->erase(iter);
-		else ++iter;
-	}
-#endif
 }
 
 /* generates a ring communication pattern for a communicator of
