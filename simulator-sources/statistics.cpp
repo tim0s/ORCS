@@ -288,9 +288,6 @@ void account_stats(bucket_t *bucket) {
 
 double account_stats_max_congestions(double max_congestions) {
 	
-	float xq=0, sq=0;
-	int count;
-	
 	acc_bandwidths.push_back(max_congestions);
 
 	if (acc_bandwidths.size() > 50) {  // The confidence interval we choose only works for n>50

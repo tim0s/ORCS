@@ -295,7 +295,7 @@ void genptrn_nneighbor(int nprocs, int level, int neighbors,
 				for(k = i + 1; k < nprocs; k++) {
 					/* check if there is a connection to this process already */
 					int foundme=0;
-					for(int l=0;l<neighbors;l++) {
+					for(l = 0; l < neighbors; l++) {
 						int remind = k * neighbors + l;
 						if(tmpedges[remind] == i)
 							foundme = 1;

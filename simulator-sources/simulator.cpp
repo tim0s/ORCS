@@ -95,7 +95,6 @@ using namespace boost;
 typedef struct {
 	int name; /* the name (rank) */
 	int level; /* the level of the collective */
-	int dist; /* dist from the last investigated root node */
 } vertex_t;
 
 struct vertex_info_t {
@@ -152,15 +151,9 @@ void simulation_dep_max_delay(cmdargs_t *cmdargs, namelist_t *namelist, int vali
 	// the graph
 	graph_t graph(0);
 
-	used_edges_t edge_list;
-	cable_cong_map_t cable_cong;
-	ptrn_t::iterator iter_ptrn;
-	bucket_t bucket;
-
 	property_map<graph_t, vertex_info_t>::type info = get(vertex_info_t(), graph);
 	typedef property_map<graph_t, edge_load_t>::type ed_load_t;
 	ed_load_t load = get(edge_load_t(), graph);
-	property_map<graph_t, vertex_index_t>::type indexmap = get(vertex_index, graph);
 
 	std::map<int,graph_traits <graph_t>::vertex_descriptor> prevleveldests; // destinations from the previous level
 
@@ -304,7 +297,6 @@ void simulation_dep_max_delay(cmdargs_t *cmdargs, namelist_t *namelist, int vali
 }
 
 void simulation_hist_max_cong(ptrn_t *ptrn, namelist_t *namelist, int state) {
-	used_edges_t edge_list;
 	cable_cong_map_t cable_cong;
 	ptrn_t::iterator iter_ptrn;
 	bucket_t bucket;
@@ -327,10 +319,8 @@ void simulation_hist_max_cong(ptrn_t *ptrn, namelist_t *namelist, int state) {
 }
 
 void simulation_get_cable_cong(ptrn_t *ptrn, namelist_t *namelist, int state) {
-	used_edges_t edge_list;
 	cable_cong_map_t cable_cong;
 	ptrn_t::iterator iter_ptrn;
-	bucket_t bucket;
 
 	if (state == RUN) {
 		int i = 0;
@@ -423,7 +413,6 @@ void find_route(uroute_t *route, std::string n1, std::string n2) {
 	Agedge_t *e;
 	Agnode_t *start;
 	Agnode_t *dest;
-	edge_t edge;
 	edgeid_t edgeid;
 	std::map<std::string, int> theMap;
 	std::pair<std::map<std::string, int>::iterator, bool> theMap_returnval;
@@ -468,32 +457,17 @@ void find_route(uroute_t *route, std::string n1, std::string n2) {
 int contains_target(char *comment, char *target) {
 
 	/**
- * This function checks if our target appears in the commma seperated list of
- * targets, encoded as a comment in the dot file. Returns 1 if yes, 0
- * otherwise. A single star '*' in the comment matches any target.
- * */
+	 * This function checks if our target appears in the commma seperated list of
+	 * targets, encoded as a comment in the dot file. Returns 1 if yes, 0
+	 * otherwise. A single star '*' in the comment matches any target.
+	 * */
 
 	//	printf("Comment: %s\n", commentin);
 	//	printf("Target: %s\n", target);
 
 	char *buffer;
 	char *result;
-	char *buffer2;
-	//	char *comment;
-	int i,j;
 
-	/*	comment = (char *) malloc((strlen(commentin) + 1) * sizeof(char));
-	j = 0;
-	for (i=0; i<strlen(commentin); i++) {
-		if ((commentin[i] != ' ') and
-		   (commentin[i] != '\t') and
-		   (commentin[i] != '\n')) {
-			comment[j] = commentin[i];
-			j++;
-		}
-	}
-	comment[j]=0;
-*/
 	if (strcmp(comment, "*") == 0) return 1;
 	buffer = (char *) malloc(strlen(comment) * sizeof(char) + 1);
 	strcpy(buffer, comment);
@@ -504,7 +478,7 @@ int contains_target(char *comment, char *target) {
 		if (result == NULL) break;
 	}
 	free(buffer);
-	//	free(comment);
+
 	if (result == NULL) return 0;
 	else return 1;
 }
