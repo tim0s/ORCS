@@ -932,45 +932,57 @@ void my_mpi_init(int *argc, char **argv[], int *rank, int *comm_size) {
 	}
 }
 
-void read_input_graph(char *filename) {
+void read_input_graph(char *filename, int my_mpi_rank) {
+	FILE *fd;
 	char *graph_buffer;
 	unsigned long fsize = 0;
 
-	if (strcmp(filename, "-") == 0) {
+	if (my_mpi_rank == 0) {
 
-		int graph_bufsize = CHARBUF_INCREMENT_SIZE * sizeof(*graph_buffer);
-		char fgetsbuf[READCHAR_BUFFER];
-		graph_buffer = (char *) calloc(CHARBUF_INCREMENT_SIZE, sizeof(*graph_buffer));
+		if (strcmp(filename, "-") == 0) {
 
-		while(fgets(fgetsbuf, READCHAR_BUFFER, stdin)) { /* Read until EOF */
-			if ((fsize + strlen(fgetsbuf) + 1) >= graph_bufsize) {
-				/* Increase the graph_buffer size */
-				graph_bufsize += CHARBUF_INCREMENT_SIZE * sizeof(*graph_buffer);
-				graph_buffer = (char *) realloc(graph_buffer, graph_bufsize);
+			int graph_bufsize = CHARBUF_INCREMENT_SIZE * sizeof(*graph_buffer);
+			char fgetsbuf[READCHAR_BUFFER];
+			graph_buffer = (char *) calloc(CHARBUF_INCREMENT_SIZE, sizeof(*graph_buffer));
+			fd = stdin;
+
+			while(fgets(fgetsbuf, READCHAR_BUFFER, fd)) { /* Read until EOF */
+				if ((fsize + strlen(fgetsbuf) + 1) >= graph_bufsize) {
+					/* Increase the graph_buffer size */
+					graph_bufsize += CHARBUF_INCREMENT_SIZE * sizeof(*graph_buffer);
+					graph_buffer = (char *) realloc(graph_buffer, graph_bufsize);
+				}
+				memcpy(graph_buffer + fsize, fgetsbuf, strlen(fgetsbuf));
+				fsize += strlen(fgetsbuf);
 			}
-			memcpy(graph_buffer + fsize, fgetsbuf, strlen(fgetsbuf));
-			fsize += strlen(fgetsbuf);
+		} else {
+			struct stat st;
+
+			stat(filename, &st);
+			fsize =	st.st_size;
+			graph_buffer = (char *) malloc(fsize * sizeof(*graph_buffer));
+
+			fd = fopen(filename, "r");
+			if (fd == NULL) {
+				fprintf(stderr, "ERROR: Could not open input file '%s'\n", filename);
+				exit(EXIT_FAILURE);
+			}
+
+			/* Read the whole file at once in the buffer */
+			fread(graph_buffer, sizeof(char), fsize, fd);
+
+			fclose(fd);
 		}
-	} else {
 
-		FILE *fd;
-		struct stat st;
+	}
 
-		stat(filename, &st);
-		fsize =	st.st_size;
-		graph_buffer = (char *) malloc(fsize * sizeof(*graph_buffer));
+	/* bcast buffer size */
+	MPI_Bcast(&fsize, 1, MPI_UNSIGNED_LONG, 0, MPI_COMM_WORLD);
+	if(my_mpi_rank != 0)
+		graph_buffer = (char *)malloc(fsize * sizeof(*graph_buffer));
 
-		fd = fopen(filename, "r");
-		if (fd == NULL) {
-			fprintf(stderr, "ERROR: Could not open input file '%s'\n", filename);
-			exit(EXIT_FAILURE);
-		}
-
-		/* Read the whole file at once in the buffer */
-		fread(graph_buffer, sizeof(char), fsize, fd);
-
-		fclose(fd);
-	}		
+	/* bcast buffer data */
+	MPI_Bcast(graph_buffer, fsize, MPI_CHAR, 0, MPI_COMM_WORLD);
 
 	//printf("file-size: %lu\n", fsize);
 	mygraph = agmemread(graph_buffer);
@@ -1006,7 +1018,7 @@ void read_node_ordering(IN char *filename,
 	char line[PARSE_GUID_BUFLEN];
 	FILE *fd;
 
-	if (!strcmp(filename, "-"))
+	if (strcmp(filename, "-") == 0)
 		return;
 
 	if (!(fd = fopen(filename, "r"))) {

@@ -60,13 +60,13 @@ int main(int argc, char *argv[]) {
 		return level;
 	}
 
-	/* TODO: should only be done on rank 0 */
-	read_input_graph(cmdargs.args_info.input_file_arg);
+	read_input_graph(cmdargs.args_info.input_file_arg, mynode);
 	tag_edges(mygraph);
 
-	/* TODO: should only be done on rank 0 */
 	/* Read the node ordering if provided */
-	read_node_ordering(cmdargs.args_info.node_ordering_file_arg, &nodeorder_guidlist);
+	if (mynode == 0)
+		read_node_ordering(cmdargs.args_info.node_ordering_file_arg,
+						   &nodeorder_guidlist);
 
 	/* Read the complete namelist and store it in a temporary vector */
 	get_namelist_from_graph(&complete_namelist);

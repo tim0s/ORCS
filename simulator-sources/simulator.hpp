@@ -121,7 +121,7 @@ void insert_route_into_uedgelist(used_edges_t *edge_list, route_t *route);
 std::string lookup(int nodenumber, namelist_t *namelist);
 void printmapping(named_ptrn_t *mapping);
 void my_mpi_init(int *argc, char ***argv, int *rank, int *comm_size);
-void read_input_graph(char *filename);
+void read_input_graph(char *filename, int my_mpi_rank);
 void read_node_ordering(IN char *filename,
                         OUT guidlist_t *guidorder_list);
 void bcast_guidlist(guidlist_t *guidlist, int my_mpi_rank);
