@@ -349,26 +349,14 @@ int main(int argc, char *argv[]) {
 	if (mynode == 0) {
 		if (cmdargs.args_info.verbose_given) {
 			if (nodeorder_namelist.size() != 0) {
-				printf("############################\n");
-				printf("NODEORDER_NAMELIST\n");
-				printf("----------------------------\n");
-				print_namelist(&nodeorder_namelist);
-				printf("############################\n");
+				print_namelist(&nodeorder_namelist, "NODEORDER_NAMELIST");
 			}
 
 			if (part_namelist.size() != 0) {
-				printf("############################\n");
-				printf("PART_NAMELIST \n");
-				printf("----------------------------\n");
-				print_namelist(&part_namelist);
-				printf("############################\n");
+				print_namelist(&part_namelist, "PART_NAMELIST");
 			}
 
-			printf("############################\n");
-			printf("NAMELIST\n");
-			printf("----------------------------\n");
-			print_namelist(&namelist);
-			printf("############################\n");
+			print_namelist(&namelist, "NAMELIST");
 		}
 	}
 
@@ -406,7 +394,10 @@ int main(int argc, char *argv[]) {
 				final_namelist.insert(final_namelist.begin() + i, nodeorder_namelist.at(i));
 		}
 
-		if ((cmdargs.args_info.printnamelist_given) && (mynode == 0)) { print_namelist(&final_namelist); }
+		/* The function print_namelist_from_all used MPI_Send and MPI_Recv
+		 * to print the namelist from all the MPI nodes to node 0. */
+		if (cmdargs.args_info.printnamelist_given)
+			print_namelist_from_all(&final_namelist, mynode, allnodes);
 
 		if(strcmp(cmdargs.args_info.metric_arg, "dep_max_delay") == 0) {
 			simulation_dep_max_delay(&cmdargs, &final_namelist, cmdargs.args_info.part_commsize_arg, mynode);

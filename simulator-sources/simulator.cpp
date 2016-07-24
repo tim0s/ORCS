@@ -392,8 +392,8 @@ void simulation_sum_max_cong(ptrn_t *ptrn, namelist_t *namelist, int state) {
 	}
 }
 
-void print_namelist(namelist_t *namelist) {
-	std::cout << "\n\nUsed subset of nodes: \n=================";
+void print_namelist(namelist_t *namelist, const char *header) {
+	printf("\n\n%s: \n=================", header);
 	if(namelist->size() == 0) printf(" namelist empty! ============\n");
 	else {
 		for (int i=0; i<namelist->size()-1; i++) {
@@ -990,6 +990,7 @@ void bcast_guidlist(guidlist_t *guidlist, int my_mpi_rank) {
 
 	/* Pack buffer on rank 0 */
 	if(my_mpi_rank == 0) {
+		count = guidlist->size();
 		buffer = (unsigned long long *)malloc(guidlist->size() * sizeof(guidlist->at(0)));
 		//unsigned long long *pos = buffer;
 		for (i = 0; i < guidlist->size(); i++)
@@ -999,7 +1000,7 @@ void bcast_guidlist(guidlist_t *guidlist, int my_mpi_rank) {
 	/* bcast buffer size */
 	MPI_Bcast(&count, 1, MPI_INT, 0, MPI_COMM_WORLD);
 	if(my_mpi_rank != 0)
-		buffer = (unsigned long long *)malloc(count);
+		buffer = (unsigned long long *)malloc(count * sizeof(*buffer));
 
 	/* bcast buffer data */
 	MPI_Bcast(buffer, count, MPI_UNSIGNED_LONG_LONG, 0, MPI_COMM_WORLD);
@@ -1051,6 +1052,70 @@ void bcast_namelist(namelist_t *namelist, int my_mpi_rank) {
 	}
 	
 	free(buffer);
+}
+
+void print_namelist_from_all(IN namelist_t *namelist,
+                             IN int my_mpi_rank,
+                             IN int commsize) {
+
+	int count = 0;
+	char *buffer, *pos;
+	int i;
+
+	/* Pack buffer on rank 0 */
+	if(my_mpi_rank == 0) {
+		char header[100] = { 0 };
+		sprintf(header, "Namelist in node with rank 0");
+		print_namelist(namelist, header);
+
+		for (i = 1; i < commsize; i++) {
+			namelist_t tmp_namelist;
+
+			MPI_Recv(&count, 1, MPI_INT, i, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+			buffer = (char *) malloc(count * sizeof(char));
+			if (buffer == NULL)
+				goto exit;
+
+			MPI_Recv(buffer, count, MPI_CHAR, i, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+			pos = buffer;
+			while (pos < buffer + count) {
+				tmp_namelist.push_back(pos);
+				pos += tmp_namelist.back().length() + 1;
+			}
+
+			sprintf(header, "Namelist in node with rank '%d'", i);
+			print_namelist(&tmp_namelist, header);
+
+			free(buffer);
+		}
+
+	} else {
+		for (i = 0; i < namelist->size(); i++)
+			count += strlen(namelist->at(i).c_str()) + 1;
+
+		MPI_Send(&count, 1, MPI_INT, 0, 0, MPI_COMM_WORLD);
+
+		buffer = (char *) malloc(count * sizeof(char));
+		if (buffer == NULL)
+			goto exit;
+
+		pos = buffer;
+		for (i = 0; i < namelist->size(); i++) {
+			strcpy(pos, namelist->at(i).c_str());
+			pos += strlen(namelist->at(i).c_str()) + 1;
+		}
+
+		MPI_Send(buffer, count, MPI_CHAR, 0, 0, MPI_COMM_WORLD);
+
+		free(buffer);
+	}
+
+	return;
+
+exit:
+	fprintf(stderr, "Node wirth rank %d could not allocate buffer in "
+	        "function print_namelist_from_all\n", my_mpi_rank);
+	MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
 }
 
 void print_commandline_options(FILE *fd, cmdargs_t *cmdargs) {

@@ -89,7 +89,7 @@ void simulation_dep_max_delay(cmdargs_t *cmdargs, namelist_t *namelist, int vali
 void simulation_get_cable_cong(ptrn_t *ptrn, namelist_t *namelist, int state);
 void print_commandline_options(FILE *fd, cmdargs_t *cmdargs);
 void print_results(cmdargs_t *cmdargs, int mynode, int allnodes);
-void print_namelist(namelist_t *namelist);
+void print_namelist(namelist_t *namelist, const char *header);
 void generate_namelist_by_name(IN char *method,
                                OUT namelist_t *namelist,
                                IN int comm_size,
@@ -123,6 +123,9 @@ void read_node_ordering(IN char *filename,
                         OUT guidlist_t *guidorder_list);
 void bcast_guidlist(guidlist_t *guidlist, int my_mpi_rank);
 void bcast_namelist(namelist_t *namelist, int my_mpi_rank);
+void print_namelist_from_all(IN namelist_t *namelist,
+                             IN int my_mpi_rank,
+                             IN int commsize);
 void exchange_results2(int mynode, int allnodes);
 void insert_route_into_cable_cong_map(cable_cong_map_t *cable_cong, uroute_t *route);
 void get_max_congestion(uroute_t *route, cable_cong_map_t *cable_cong, int *weight);
