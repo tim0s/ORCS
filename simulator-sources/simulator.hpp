@@ -13,6 +13,10 @@
 #define RUN 100
 #define ACCOUNT 101
 #define PARSE_GUID_BUFLEN  256
+
+#define READCHAR_BUFFER 65536
+#define CHARBUF_INCREMENT_SIZE 1048576
+
 #define MAX_ARG_SIZE 256  /* Defines the maximum ptrnarg size */
 #define MAX_PTRNVSPTRN_ARG_SIZE (MAX_ARG_SIZE * 4 + 1) /* Because in the ptrnvsptrn we need to pass 4 args, have
                                                         * a separate definition for the max ptrnvsptrn size */

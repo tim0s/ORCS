@@ -9,6 +9,7 @@
  */
 
 #define MPICH_IGNORE_CXX_SEEK
+#include <sys/stat.h>
 #include <algorithm>
 #include <stdio.h>
 #include <stdlib.h>
@@ -897,46 +898,84 @@ void get_max_congestion(uroute_t *route, cable_cong_map_t *cable_cong, int *weig
 }
 
 void my_mpi_init(int *argc, char **argv[], int *rank, int *comm_size) {
-	int *recvbuf, i;
+	int *recvbuf_id, i, name_len;
+	char processor_name[MPI_MAX_PROCESSOR_NAME], *recvbuf_proc_name;
 
 	MPI_Init(argc, argv);
 	MPI_Comm_size(MPI_COMM_WORLD, comm_size);
 	MPI_Comm_rank(MPI_COMM_WORLD, rank);
 
-	if (*rank == 0)
-		recvbuf = (int *) malloc(*comm_size * sizeof(*rank));
+	MPI_Get_processor_name(processor_name, &name_len);
 
-	MPI_Gather(rank, 1, MPI_INT, recvbuf, 1, MPI_INT, 0, MPI_COMM_WORLD);
+	if (*rank == 0) {
+		recvbuf_id = (int *) malloc(*comm_size * sizeof(*rank));
+		recvbuf_proc_name = (char *) malloc(*comm_size * MPI_MAX_PROCESSOR_NAME * sizeof(*processor_name));
+	}
+
+	MPI_Gather(rank, 1, MPI_INT,
+	           recvbuf_id, 1, MPI_INT,
+	           0, MPI_COMM_WORLD);
+	MPI_Gather(processor_name, MPI_MAX_PROCESSOR_NAME, MPI_CHAR,
+	           recvbuf_proc_name, MPI_MAX_PROCESSOR_NAME, MPI_CHAR,
+	           0, MPI_COMM_WORLD);
 	if (*rank == 0) {
 		printf("Total MPI nodes participating in the simulation: '%d'\n", *comm_size);
-		printf("Hello from Master MPI node with rank '%d' (%d/%d)\n",
-		       *rank, *rank + 1, * comm_size);
+		printf("Hello from Master MPI node '%s' with rank '%d' (%d/%d)\n",
+		       recvbuf_proc_name, *rank, *rank + 1, * comm_size);
 		for (i = 1; i < *comm_size; i++)
-			printf("Hello from MPI node with rank '%d' (%d/%d)\n",
-			       recvbuf[i], recvbuf[i] + 1, * comm_size);
+			printf("Hello from MPI node '%s' with rank '%d' (%d/%d)\n",
+			       recvbuf_proc_name + MPI_MAX_PROCESSOR_NAME * i,
+			       recvbuf_id[i], recvbuf_id[i] + 1, * comm_size);
 
-		free(recvbuf);
+		free(recvbuf_id);
+		free(recvbuf_proc_name);
 	}
 }
 
 void read_input_graph(char *filename) {
+	char *graph_buffer;
+	unsigned long fsize = 0;
+
 	if (strcmp(filename, "-") == 0) {
-		mygraph = agread(stdin, 0);
-	}
-	else {
+
+		int graph_bufsize = CHARBUF_INCREMENT_SIZE * sizeof(*graph_buffer);
+		char fgetsbuf[READCHAR_BUFFER];
+		graph_buffer = (char *) calloc(CHARBUF_INCREMENT_SIZE, sizeof(*graph_buffer));
+
+		while(fgets(fgetsbuf, READCHAR_BUFFER, stdin)) { /* Read until EOF */
+			if ((fsize + strlen(fgetsbuf) + 1) >= graph_bufsize) {
+				/* Increase the graph_buffer size */
+				graph_bufsize += CHARBUF_INCREMENT_SIZE * sizeof(*graph_buffer);
+				graph_buffer = (char *) realloc(graph_buffer, graph_bufsize);
+			}
+			memcpy(graph_buffer + fsize, fgetsbuf, strlen(fgetsbuf));
+			fsize += strlen(fgetsbuf);
+		}
+	} else {
+
 		FILE *fd;
+		struct stat st;
+
+		stat(filename, &st);
+		fsize =	st.st_size;
+		graph_buffer = (char *) malloc(fsize * sizeof(*graph_buffer));
 
 		fd = fopen(filename, "r");
 		if (fd == NULL) {
-			std::cout << "Could not open input file " << filename << std::endl;
+			fprintf(stderr, "ERROR: Could not open input file '%s'\n", filename);
 			exit(EXIT_FAILURE);
 		}
-		else {
-			mygraph = agread(fd, 0);
-			fclose(fd);
-		}
-	}
 
+		/* Read the whole file at once in the buffer */
+		fread(graph_buffer, sizeof(char), fsize, fd);
+
+		fclose(fd);
+	}		
+
+	//printf("file-size: %lu\n", fsize);
+	mygraph = agmemread(graph_buffer);
+
+	free(graph_buffer);
 }
 
 void tag_edges(Agraph_t *mygraph) {
