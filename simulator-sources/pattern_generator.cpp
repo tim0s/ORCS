@@ -418,8 +418,6 @@ void genptrn_nreceivers_with_chance(int comm_size, int level, int num_receivers,
 	 * sending traffic to more than one receivers */
 	boost::assign::push_back(available_src_nodes_bucket).repeat_fun(comm_size, next<int>(0));
 
-	non_receivers_bucket = available_src_nodes_bucket;
-
 	/* First pull out of the available_nodes_bucket the first num_receivers receiver nodes
 	 * and put them in the bucket receivers_bucket */
 	for (receiver = 0; receiver < num_receivers; receiver++) {
@@ -427,6 +425,8 @@ void genptrn_nreceivers_with_chance(int comm_size, int level, int num_receivers,
 
 		available_src_nodes_bucket.erase(available_src_nodes_bucket.begin());
 	}
+
+	non_receivers_bucket = available_src_nodes_bucket;
 
 	/* Now choose random sources and make them to communicate with one receiver at a time
 	 * If dice <= chance_to_communicate_with_a_receiver. Otherwise, communicate with a
