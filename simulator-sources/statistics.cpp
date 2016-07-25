@@ -26,24 +26,26 @@ cable_cong_map_t cable_cong_global;
 
 int *get_bigbucket(int *size) {
 	
-	int *buffer;
+	int *buffer = NULL;
 
 	*size = bigbucket.size();
-	buffer = (int *) malloc(bigbucket.size() * sizeof(int));
-	for (int i = 0; i<bigbucket.size(); i++) {
-		buffer[i] = bigbucket.at(i);
+	if (*size > 0) {
+		buffer = (int *) malloc(bigbucket.size() * sizeof(*buffer));
+		for (int i = 0; i<bigbucket.size(); i++)
+			buffer[i] = bigbucket.at(i);
 	}
 	return buffer;
 }
 
 double *get_results(int *size) {
 	
-	double *results;
+	double *results = NULL;
 
 	*size = acc_bandwidths.size();
-	results = (double *) malloc(acc_bandwidths.size() * sizeof(double));
-	for (int i = 0; i<acc_bandwidths.size(); i++) {
-		results[i] = acc_bandwidths.at(i);
+	if (*size > 0) {
+		results = (double *) malloc(acc_bandwidths.size() * sizeof(*results));
+		for (int i = 0; i<acc_bandwidths.size(); i++)
+			results[i] = acc_bandwidths.at(i);
 	}
 	return results;
 }

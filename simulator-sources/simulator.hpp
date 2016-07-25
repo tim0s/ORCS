@@ -44,12 +44,14 @@ typedef struct {
 
 typedef struct {
 	int num_receivers;
-	double chance_to_send_to_a_receiver;
-	double chance_to_not_send_at_all;
+	double chance_to_communicate_with_a_receiver;
+	double chance_to_not_communicate_at_all;
+	char choose_src_method[10];
 } receivers_t;
 
-typedef std::pair<int, int> pair_t;
-typedef std::vector<pair_t> ptrn_t;
+typedef std::pair<int, int> int_pair_t;
+typedef std::vector<int_pair_t> int_pair_vec_t;
+typedef int_pair_vec_t ptrn_t;
 
 typedef std::pair<std::string, std::string> edge_t; 
 typedef int edgeid_t;

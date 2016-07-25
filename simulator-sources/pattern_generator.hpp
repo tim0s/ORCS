@@ -9,9 +9,6 @@
 #include "MersenneTwister.h"
 #include "simulator.hpp"
 
-typedef std::pair<int, int> pair_t; 
-typedef std::vector<pair_t> ptrn_t;
-
 void genptrn_bisect(int comm_size, int level, ptrn_t *ptrn,
                     int my_mpi_rank,
                     bool respect_print_once = true);
@@ -60,11 +57,21 @@ void genptrn_nneighbor(int nprocs, int level, int neighbors,
                        ptrn_t *ptrn, int my_mpi_rank,
                        bool respect_print_once = true);
 
-void genptrn_nreceivers_with_chance(int comm_size, int level, int num_receivers,
-                                    double chance_to_communicate_with_a_receiver,
-                                    double chance_to_not_communicate_at_all,
-                                    ptrn_t *ptrn, int my_mpi_rank,
-                                    bool respect_print_once = true);
+void genptrn_nrecv(int comm_size, int level,
+                   bool one_sender,
+                   receivers_t *recv_args,
+                   ptrn_t *ptrn, int my_mpi_rank,
+                   bool respect_print_once);
+
+void genptrn_nrecv_all_src(int comm_size, int level,
+                           receivers_t *recv_args,
+		                   ptrn_t *ptrn, int my_mpi_rank,
+		                   bool respect_print_once = true);
+
+void genptrn_nrecv_one_src(int comm_size, int level,
+                           receivers_t *recv_args,
+		                   ptrn_t *ptrn, int my_mpi_rank,
+		                   bool respect_print_once = true);
 
 void printptrn(ptrn_t *ptrn, namelist_t *namelist);
 

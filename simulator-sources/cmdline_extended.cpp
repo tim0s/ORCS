@@ -193,35 +193,48 @@ static void print_ptrnarg_help(IN char *ptrn,
 		if (strcmp(ptrn, "neighbor") == 0) {
 			/* Prints an INT Required usage/error message */
 			fprintf(stderr, "Pattern '%s' requires an integer ptrnarg that is greater than 0.\n", ptrn);
-		} else if (strcmp(ptrn, "receivers") == 0) {
+		} else if (strcmp(ptrn, "recvs_one_src") == 0 ||
+		           strcmp(ptrn, "recvs_all_src") == 0) {
 			fprintf(stderr, "Pattern '%s' requires a ptrnarg in the following format:\n"
-					"         <num_receivers>[,<chance_factor_1>[,<chance_factor_2>]]\n"
-					"         \n"
-					"       The 'num_receivers' arg is a mandatory integer number greater than zero, and defines the number\n"
-					"         of receivers that will be used in the experiment.\n"
-					"       The 'chance_factor_1' arg is an optional percentage (accepts values between 0.0 and 1.0) and defines\n"
-					"         a chance that a chosen source node will have to communicate with a receiver in the pattern. If no\n"
-					"         chance_factor_1 is provided, the chance_factor_1 is set to 1.0, and the chosen source nodes will\n"
-					"         always communicate with a receiver.\n"
-					"       The 'chance_factor_2' arg is another optional percentage (accepts values between 0.0 and 1.0) and\n"
-					"         defines the chance that if a chosen source node is decided that will not communicate with a\n"
-					"         receiver (based on chance_factor_1), there is a chance that it will stay idle (i.e. not communicate\n"
-					"         at all with any other node). If the chance_factor_1 is set to 1.0, the chance_factor_2 will have no\n"
-					"         effect in the experiment. The chance_factor_2 is set to 0.0 by default, i.e. there are no idle nodes.\n", ptrn);
+			        "         <num_receivers>[,<chance_factor_1>[,<chance_factor_2>]][,choose_sender_mode]\n"
+			        "\n"
+			        "%s\n"
+			        "       The receivers that the source nodes choose to send traffic to, are always chosen based on the\n"
+			        "         source node's 'linear-picking-index' mod 'num_receivers'.\n"
+			        "\n"
+			        "       The 'num_receivers' arg is a mandatory integer number greater than zero, and defines the number\n"
+			        "         of receivers that will be used in the experiment.\n"
+			        "       The 'chance_factor_1' arg is an optional percentage (accepts values between 0.0 and 1.0) and defines\n"
+			        "         a chance that a chosen source node will have to communicate with a receiver in the pattern. If no\n"
+			        "         chance_factor_1 is provided, the chance_factor_1 is set to 1.0, and the chosen source nodes will\n"
+			        "         always communicate with a receiver.\n"
+			        "       The 'chance_factor_2' arg is another optional percentage (accepts values between 0.0 and 1.0) and\n"
+			        "         defines the chance that if a chosen source node is decided that will not communicate with a\n"
+			        "         receiver (based on chance_factor_1), there is a chance that it will stay idle (i.e. not communicate\n"
+			        "         at all with any other node). If the chance_factor_1 is set to 1.0, the chance_factor_2 will have no\n"
+			        "         effect in the experiment. The chance_factor_2 is set to 0.0 by default, i.e. there are no idle nodes.\n"
+			        "       The 'choose_sender_mode' arg can accept either the value 'rand' or 'linear', and will define if the\n"
+			        "         sender nodes that send traffic to the receivers will be chosen randomly or linearly. The default\n"
+			        "         value is 'rand'.",
+			        ptrn, (strcmp(ptrn, "recvs_one_src") == 0 ) ?
+			            "       The pattern recvs_one_src will choose only one sender per receiver node."
+			          :
+			            "       The pattern recvs_all_src will use all non-receivers nodes as senders"
+			            " towards the receiver nodes.");
 		} else if (strcmp(ptrn, "ptrnvsptrn") == 0) {
 			fprintf(stderr, "Pattern '%s' requires a string ptrnarg in the following format:\n"
-					"         <pattern1>[:<arg2>]::<pattern2>[:<arg2>]\n"
-					"         \n"
-					"       The args ('arg1' and/or 'arg2') are optional, and should only be provided if the used patterns\n"
-					"        need an argument. All of the available patterns except 'ptrnvsptrn' can be used for either\n"
-					"        'pattern1' or 'pattern2'.\n", ptrn);
+			        "         <pattern1>[:<arg2>]::<pattern2>[:<arg2>]\n"
+			        "         \n"
+			        "       The args ('arg1' and/or 'arg2') are optional, and should only be provided if the used patterns\n"
+			        "        need an argument. All of the available patterns except 'ptrnvsptrn' can be used for either\n"
+			        "        'pattern1' or 'pattern2'.\n", ptrn);
 		}
 
 		fprintf(stderr, "%s%s%s%s\n",
-			   ptrnarg ? "\nPattern argument '" : "",
-			   ptrnarg ? ptrnarg : "",
-			   ptrnarg ? "' " : "",
-			   ptrnarg ? "provided." : "");
+		        ptrnarg ? "\nPattern argument '" : "",
+		        ptrnarg ? ptrnarg : "",
+		        ptrnarg ? "' " : "",
+		        ptrnarg ? "provided." : "");
 	}
 
 	if (terminate_prog) {
@@ -279,7 +292,7 @@ static void process_ptrnargs(IN char *ptrn,
 
 		char *next_num;
 
-		int *ptrnarg_i = (int *)malloc(sizeof(*ptrnarg_i));
+		int *ptrnarg_i = (int *) malloc(sizeof(*ptrnarg_i));
 		if (ptrnarg_i == NULL)
 			goto exit;
 
@@ -291,7 +304,8 @@ static void process_ptrnargs(IN char *ptrn,
 
 		cmdargs->ptrnarg = (void *)ptrnarg_i;
 
-	} else if (strcmp(ptrn, "receivers") == 0) {
+	} else if (strcmp(ptrn, "recvs_one_src") == 0 ||
+	           strcmp(ptrn, "recvs_all_src") == 0) {
 
 		/** ****************************************************************
 		 * For the receivers pattern, the pattern argument must be a
@@ -306,7 +320,7 @@ static void process_ptrnargs(IN char *ptrn,
 		 *******************************************************************/
 
 		regex_t regex;
-		const int numGroups = 6;
+		const int numGroups = 8;
 		regmatch_t matchedGroups[numGroups];
 		int ret, g, start_pos, end_pos;
 		char *cursor = ptrnarg;
@@ -314,19 +328,22 @@ static void process_ptrnargs(IN char *ptrn,
 
 		int num_receivers;
 		double process_a_chance;
-		receivers_t *receivers_args = (receivers_t *)malloc(sizeof(receivers_args));
+		receivers_t *receivers_args = (receivers_t *) malloc(sizeof(*receivers_args));
 		if (receivers_args == NULL)
 			goto exit;
 
 		/* Default -1 indicates that the chance_to_send_to_a_receiver hasn't been provided by the user */
-		receivers_args->chance_to_send_to_a_receiver = 1.0;
-		receivers_args->chance_to_not_send_at_all = 0.0;
+		receivers_args->chance_to_communicate_with_a_receiver = 1.0;
+		receivers_args->chance_to_not_communicate_at_all = 0.0;
+		strcpy(receivers_args->choose_src_method, "rand");
 
 		/* Why I use double backslash to escape the 'dot': http://stackoverflow.com/a/18477178/1275161 */
-		ret = regcomp(&regex, "^([[:digit:]]+)(,([-+]?[0-9]*\\.?[0-9]+))?(,([-+]?[0-9]*\\.?[0-9]+))?$", REG_EXTENDED);
+		//"^([[:digit:]]+)(,([-+]?[0-9]*\\.?[0-9]+))?(,([-+]?[0-9]*\\.?[0-9]+))?$"
+		ret = regcomp(&regex, "^([[:digit:]]+)(,([-+]?[0-9]*\\.?[0-9]+))?(,([-+]?[0-9]*\\.?[0-9]+))?(,(rand|linear))?$", REG_EXTENDED);
 		if (ret) {
 			if (my_mpi_rank == 0)
 				fprintf(stderr, "Could not compile regex\n");
+			free(receivers_args);
 			MPI_Finalize();
 			exit(EXIT_FAILURE);
 		}
@@ -353,7 +370,7 @@ static void process_ptrnargs(IN char *ptrn,
 			            end_pos - start_pos : MAX_ARG_SIZE);
 			match[MAX_ARG_SIZE - 1] = 0;
 
-			//printf("Matching now: %s, cursor: %s\n", match, cursor);
+			//printf("Matching now: '%s', cursor: '%s'\n", match, cursor);
 
 			if (g == 0) {
 				/* Check if the complete matched string is the same as the ptrnarg. */
@@ -388,9 +405,14 @@ static void process_ptrnargs(IN char *ptrn,
 							print_ptrnarg_help(ptrn, ptrnarg, my_mpi_rank, true);
 						}
 						if (g == 3)
-							receivers_args->chance_to_send_to_a_receiver = process_a_chance;
+							receivers_args->chance_to_communicate_with_a_receiver = process_a_chance;
 						else if (g == 5)
-							receivers_args->chance_to_not_send_at_all = process_a_chance;
+							receivers_args->chance_to_not_communicate_at_all = process_a_chance;
+						break;
+					case 7:
+						strncpy(receivers_args->choose_src_method, match,
+						        sizeof(receivers_args->choose_src_method));
+						receivers_args->choose_src_method[sizeof(receivers_args->choose_src_method) - 1] = '\0';
 						break;
 				}
 			}
@@ -447,6 +469,7 @@ static void process_ptrnargs(IN char *ptrn,
 		if (ret) {
 			if (my_mpi_rank == 0)
 				fprintf(stderr, "Could not compile regex\n");
+			free(ptrnvsptrn);
 			MPI_Finalize();
 			exit(EXIT_FAILURE);
 		}
@@ -560,6 +583,7 @@ static void process_ptrnargs(IN char *ptrn,
 						printf("     %s\n", cmdline_parser_ptrn_values[i]);
 				}
 			}
+			free(ptrnvsptrn);
 			MPI_Finalize();
 			exit(EXIT_FAILURE);
 		}
@@ -623,7 +647,8 @@ void perform_sanity_checks_in_args(IN OUT cmdargs_t *cmdargs,
 	 * mandatory pattern argument that hasn't been provided, warn
 	 * and exit. */
 	if ((strcmp(ptrn, "neighbor") == 0 ||
-	     strcmp(ptrn, "receivers") == 0 ||
+	     strcmp(ptrn, "recvs_one_src") == 0 ||
+	     strcmp(ptrn, "recvs_all_src") == 0 ||
 	     strcmp(ptrn, "ptrnvsptrn") == 0) &&
 	        ptrnarg == NULL)
 		print_ptrnarg_help(ptrn, NULL, my_mpi_rank, true);
@@ -642,7 +667,8 @@ void perform_sanity_checks_in_args(IN OUT cmdargs_t *cmdargs,
 void cleanup_args(IN char *ptrn, IN void *ptrnarg) {
 
 	if ((strcmp(ptrn, "neighbor") == 0 ||
-	     strcmp(ptrn, "receivers") == 0))
+	     strcmp(ptrn, "recvs_one_src") == 0 ||
+	     strcmp(ptrn, "recvs_all_src") == 0))
 		free(ptrnarg);
 	else if (strcmp(ptrn, "ptrnvsptrn") == 0) {
 		ptrnvsptrn_t *ptrnvsptrn = (ptrnvsptrn_t *)ptrnarg;

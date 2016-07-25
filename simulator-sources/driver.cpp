@@ -130,7 +130,7 @@ int main(int argc, char *argv[]) {
 				}
 			}
 			printf("Completed\n");
-			return 0;
+			return EXIT_SUCCESS;
 		}
 
 		/* we have to use all hosts for the route quality assessment */
@@ -265,7 +265,7 @@ int main(int argc, char *argv[]) {
 		}
 
 		MPI_Finalize();
-		return 0;
+		return EXIT_SUCCESS;
 	}
 
 	/* If the user has provided a nodeorder guid list we may need to modify the namelist,

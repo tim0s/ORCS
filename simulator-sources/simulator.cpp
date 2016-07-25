@@ -59,7 +59,7 @@ void exchange_results_hist_max_cong(int mynode, int allnodes) {
 	if (mynode == 0) {
 		for (int counter = 1; counter < allnodes; counter++) {
 			MPI_Recv(&size, 1, MPI_INT, counter, 0, MPI_COMM_WORLD, &status); //size
-			bucket = (int *) malloc(size * sizeof(int));
+			bucket = (int *) malloc(size * sizeof(*bucket));
 			MPI_Recv(bucket, size, MPI_INT, counter, 0, MPI_COMM_WORLD, &status); //data
 			add_to_bigbucket(bucket, size);
 			free(bucket);
@@ -75,9 +75,6 @@ void simulation_with_metric(char *metric_name, ptrn_t *ptrn, namelist_t *namelis
 }
 
 void merge_two_patterns_into_one(ptrn_t *ptrn1, ptrn_t *ptrn2, int comm1_size, ptrn_t *ptrn_res) {
-
-	// typedef std::pair<int, int> pair_t;
-	// typedef std::vector<pair_t> ptrn_t;
 
 	ptrn_res->clear();
 	ptrn_t::iterator iter_ptrn1;
@@ -469,7 +466,7 @@ int contains_target(char *comment, char *target) {
 	char *result;
 
 	if (strcmp(comment, "*") == 0) return 1;
-	buffer = (char *) malloc(strlen(comment) * sizeof(char) + 1);
+	buffer = (char *) malloc(strlen(comment) * sizeof(*buffer) + 1);
 	strcpy(buffer, comment);
 	result = strtok(buffer, ", \t\n");
 	
@@ -864,7 +861,7 @@ void read_input_graph(char *filename, int my_mpi_rank) {
 	/* bcast buffer size */
 	MPI_Bcast(&fsize, 1, MPI_UNSIGNED_LONG, 0, MPI_COMM_WORLD);
 	if(my_mpi_rank != 0) {
-		graph_buffer = (char *)malloc(fsize * sizeof(*graph_buffer));
+		graph_buffer = (char *) malloc(fsize * sizeof(*graph_buffer));
 		if (graph_buffer == NULL)
 			goto exit;
 	}
@@ -991,7 +988,7 @@ void bcast_guidlist(guidlist_t *guidlist, int my_mpi_rank) {
 	/* Pack buffer on rank 0 */
 	if(my_mpi_rank == 0) {
 		count = guidlist->size();
-		buffer = (unsigned long long *)malloc(guidlist->size() * sizeof(guidlist->at(0)));
+		buffer = (unsigned long long *) malloc(guidlist->size() * sizeof(guidlist->at(0)));
 		//unsigned long long *pos = buffer;
 		for (i = 0; i < guidlist->size(); i++)
 			buffer[i] = guidlist->at(i);
@@ -1000,7 +997,7 @@ void bcast_guidlist(guidlist_t *guidlist, int my_mpi_rank) {
 	/* bcast buffer size */
 	MPI_Bcast(&count, 1, MPI_INT, 0, MPI_COMM_WORLD);
 	if(my_mpi_rank != 0)
-		buffer = (unsigned long long *)malloc(count * sizeof(*buffer));
+		buffer = (unsigned long long *) malloc(count * sizeof(*buffer));
 
 	/* bcast buffer data */
 	MPI_Bcast(buffer, count, MPI_UNSIGNED_LONG_LONG, 0, MPI_COMM_WORLD);
@@ -1026,7 +1023,7 @@ void bcast_namelist(namelist_t *namelist, int my_mpi_rank) {
 			count += strlen(namelist->at(i).c_str()) + 1;
 		}
 
-		buffer = (char *) malloc(count * sizeof(char));
+		buffer = (char *) malloc(count * sizeof(*buffer));
 		char *pos = buffer;
 		for (i = 0; i < namelist->size(); i++) {
 			strcpy(pos, namelist->at(i).c_str());
@@ -1037,7 +1034,7 @@ void bcast_namelist(namelist_t *namelist, int my_mpi_rank) {
 	/* bcast buffer size */
 	MPI_Bcast(&count, 1, MPI_INT, 0, MPI_COMM_WORLD);
 	if(my_mpi_rank != 0)
-		buffer = (char *) malloc(count * sizeof(char));
+		buffer = (char *) malloc(count * sizeof(*buffer));
 
 	/* bcast buffer data */
 	MPI_Bcast(buffer, count, MPI_CHAR, 0, MPI_COMM_WORLD);
@@ -1072,7 +1069,7 @@ void print_namelist_from_all(IN namelist_t *namelist,
 			namelist_t tmp_namelist;
 
 			MPI_Recv(&count, 1, MPI_INT, i, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-			buffer = (char *) malloc(count * sizeof(char));
+			buffer = (char *) malloc(count * sizeof(*buffer));
 			if (buffer == NULL)
 				goto exit;
 
@@ -1095,7 +1092,7 @@ void print_namelist_from_all(IN namelist_t *namelist,
 
 		MPI_Send(&count, 1, MPI_INT, 0, 0, MPI_COMM_WORLD);
 
-		buffer = (char *) malloc(count * sizeof(char));
+		buffer = (char *) malloc(count * sizeof(*buffer));
 		if (buffer == NULL)
 			goto exit;
 
@@ -1181,7 +1178,7 @@ void exchange_results2(int mynode, int allnodes) {
 	int size;
 
 	double *buffer = get_results(&size);
-	double *recvbuf = (double *) malloc(size * allnodes * sizeof(double));
+	double *recvbuf = (double *) malloc(size * allnodes * sizeof(*recvbuf));
 
 	/*
 	if (mynode == 0) {
@@ -1232,8 +1229,8 @@ void allreduce_contig_int_map(std::map<int,int> *map) {
 	MPI_Allreduce (&max, &gmax, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
 	//printf("max: %i %i\n", max, gmax);
 
-	int *sfield = (int*)calloc(gmax+1,sizeof(int));
-	int *rfield = (int*)calloc(gmax+1,sizeof(int));
+	int *sfield = (int *) calloc(gmax + 1, sizeof(*sfield));
+	int *rfield = (int *) calloc(gmax + 1, sizeof(*rfield));
 	// fill the field with the map contents
 	for(std::map<int, int>::iterator i=map->begin(); i!=map->end(); ++i) {
 		assert(i->first <= gmax);
