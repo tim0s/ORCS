@@ -552,7 +552,7 @@ void genptrn_by_name(ptrn_t *ptrn, char *ptrnname, void *ptrnarg, int comm_size,
 	}
 	else {
 		if (my_mpi_rank == 0)
-			printf("ERROR: %s pattern not implemented\n", ptrnname);
+			fprintf(stderr, "ERROR: %s pattern not implemented\n", ptrnname);
 
 		MPI_Finalize();
 		exit(EXIT_FAILURE);
