@@ -445,32 +445,33 @@ void genptrn_nreceivers_with_chance(int comm_size, int level, int num_receivers,
 
 		/* Throw a dice to decide if the src node will communicate with the receiver.
 		 * If the dice value is greater than 'chance_to_communicate_with_a_receiver',
-		 * then then throw another dice. If the second dice value is less than
+		 * then throw another dice. If the value of the second dice is less than
 		 * 'chance_to_not_communicate_at_all' select a dst other than receiver, from
 		 * the non_receivers_bucket. If the second dice is greater than
 		 * 'chance_to_not_communicate_at_all', then this src node is not communicating
 		 * with anyone else in this round. */
 		dice = mtrand.rand();
-		if ((dice > chance_to_communicate_with_a_receiver &&
-		     non_receivers_bucket.size() > 0)) {
+		if (dice > chance_to_communicate_with_a_receiver) {
 
 			dice = mtrand.rand();
 			if (dice < chance_to_not_communicate_at_all)
 				continue;
 
-			/* Pick a new receiver if receiver == src, only if the size of the bucket
-			 * 'non_receivers_bucket' is greater than 1 (meaning that we have more
-			 * options to choose from). */
-			do {
-				myrand_pos = mtrand.randInt(non_receivers_bucket.size() - 1);
-				receiver = non_receivers_bucket.at(myrand_pos);
-			} while (receiver == src && non_receivers_bucket.size() > 1);
+			if (non_receivers_bucket.size() > 0) {
+				/* Pick a new receiver if receiver == src, only if the size of the bucket
+				 * 'non_receivers_bucket' is greater than 1 (meaning that we have more
+				 * options to choose from). */
+				do {
+					myrand_pos = mtrand.randInt(non_receivers_bucket.size() - 1);
+					receiver = non_receivers_bucket.at(myrand_pos);
+				} while (receiver == src && non_receivers_bucket.size() > 1);
 
-			/* If the newly chosen receiver is not the same as src, replace the already
-			 * existing dst. */
-			if (receiver != src) {
-				dst = receiver;
-				non_receivers_bucket.erase(non_receivers_bucket.begin() + myrand_pos);
+				/* If the newly chosen receiver is not the same as src, replace the already
+				 * existing dst. */
+				if (receiver != src) {
+					dst = receiver;
+					non_receivers_bucket.erase(non_receivers_bucket.begin() + myrand_pos);
+				}
 			}
 		}
 
