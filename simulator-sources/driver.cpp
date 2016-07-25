@@ -214,7 +214,7 @@ int main(int argc, char *argv[]) {
 					find_route(&route, namelist.at(src), namelist.at(tgt));
 
 					int max = 0;
-					for(uroute_t::iterator iter=route.begin(); iter!=route.end(); iter++) {
+					for(uroute_t::iterator iter=route.begin(); iter!=route.end(); ++iter) {
 						//printf("%i\n", cable_cong[*iter]);
 						/* do not evaluate the first and last edge! */
 						if(iter != route.begin() && (iter+1) != route.end()) {
@@ -241,19 +241,17 @@ int main(int argc, char *argv[]) {
 
 			// get number of elements in bins
 			float sum=0;
-			for(std::map<int, int>::iterator i=bins.begin(); i!=bins.end(); i++) {
-				sum+=i->second;
-			}
+			for(std::map<int, int>::iterator i=bins.begin(); i!=bins.end(); ++i)
+				sum += i->second;
 
 			// get probability for each key
 			std::map<int, float> prob;
-			for(std::map<int, int>::iterator i=bins.begin(); i!=bins.end(); i++) {
+			for(std::map<int, int>::iterator i=bins.begin(); i!=bins.end(); ++i)
 				prob[i->first] = (float)i->second/sum;
-			}
 
 			// get E and V
 			float E=0,V=0;
-			for(std::map<int, int>::iterator i=bins.begin(); i!=bins.end(); i++) {
+			for(std::map<int, int>::iterator i=bins.begin(); i!=bins.end(); ++i) {
 				E += i->first*prob[i->first];
 				V += (i->first*i->first)*prob[i->first];
 			}
@@ -306,7 +304,7 @@ int main(int argc, char *argv[]) {
 				/* If not found, remove from nodeorder_guidlist */
 				ull_iter = nodeorder_guidlist.erase(ull_iter);
 			else
-				ull_iter++;
+				++ull_iter;
 		}
 
 		/* Convert the nodeordered guidlist back to an ordered namelist. Now we are sure that

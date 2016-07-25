@@ -81,13 +81,13 @@ void merge_two_patterns_into_one(ptrn_t *ptrn1, ptrn_t *ptrn2, int comm1_size, p
 
 	ptrn_res->clear();
 	ptrn_t::iterator iter_ptrn1;
-	for (iter_ptrn1 = ptrn1->begin(); iter_ptrn1 != ptrn1->end(); iter_ptrn1++) {
+	for (iter_ptrn1 = ptrn1->begin(); iter_ptrn1 != ptrn1->end(); ++iter_ptrn1)
 		ptrn_res->push_back( std::make_pair(iter_ptrn1->first, iter_ptrn1->second ));
-	}
+
 	ptrn_t::iterator iter_ptrn2;
-	for (iter_ptrn2 = ptrn2->begin(); iter_ptrn2 != ptrn2->end(); iter_ptrn2++) {
+	for (iter_ptrn2 = ptrn2->begin(); iter_ptrn2 != ptrn2->end(); ++iter_ptrn2)
 		ptrn_res->push_back(std::make_pair(iter_ptrn2->first + comm1_size, iter_ptrn2->second + comm1_size ));
-	}
+
 }
 
 using namespace boost;
@@ -176,7 +176,7 @@ void simulation_dep_max_delay(cmdargs_t *cmdargs, namelist_t *namelist, int vali
 
 		// first step - fill cable congestion map
 		cable_cong_map_t cable_cong;
-		for (ptrn_t::iterator iter_ptrn = ptrn.begin(); iter_ptrn != ptrn.end(); iter_ptrn++) {
+		for (ptrn_t::iterator iter_ptrn = ptrn.begin(); iter_ptrn != ptrn.end(); ++iter_ptrn) {
 			uroute_t route;
 			find_route(&route, namelist->at(iter_ptrn->first), namelist->at(iter_ptrn->second));
 			insert_route_into_cable_cong_map(&cable_cong, &route);
@@ -189,7 +189,7 @@ void simulation_dep_max_delay(cmdargs_t *cmdargs, namelist_t *namelist, int vali
 		//   edge with weight of the congestion
 		//  each source (level x, rank) in level x which has a destination
 		//   (level x-1, rank) is connected with an edge with weight
-		for (ptrn_t::iterator iter_ptrn = ptrn.begin(); iter_ptrn != ptrn.end(); iter_ptrn++) {
+		for (ptrn_t::iterator iter_ptrn = ptrn.begin(); iter_ptrn != ptrn.end(); ++iter_ptrn) {
 
 			// only consider the first valid_until ranks - no communication
 			// will cross this border (has to be guaranteed in pattern!)
@@ -303,7 +303,7 @@ void simulation_hist_max_cong(ptrn_t *ptrn, namelist_t *namelist, int state) {
 
 	if (state == RUN) {
 		int i = 0;
-		for (iter_ptrn = ptrn->begin(); iter_ptrn != ptrn->end(); iter_ptrn++) {
+		for (iter_ptrn = ptrn->begin(); iter_ptrn != ptrn->end(); ++iter_ptrn) {
 			uroute_t route;
 			i++;
 			find_route(&route, namelist->at(iter_ptrn->first), namelist->at(iter_ptrn->second));
@@ -324,7 +324,7 @@ void simulation_get_cable_cong(ptrn_t *ptrn, namelist_t *namelist, int state) {
 
 	if (state == RUN) {
 		int i = 0;
-		for (iter_ptrn = ptrn->begin(); iter_ptrn != ptrn->end(); iter_ptrn++) {
+		for (iter_ptrn = ptrn->begin(); iter_ptrn != ptrn->end(); ++iter_ptrn) {
 			uroute_t route;
 			i++;
 			find_route(&route, namelist->at(iter_ptrn->first), namelist->at(iter_ptrn->second));
@@ -342,7 +342,7 @@ void simulation_hist_effective_bandwidth(ptrn_t *ptrn, namelist_t *namelist, int
 	static bucket_t bucket;
 
 	if (state == RUN) {
-		for (iter_ptrn = ptrn->begin(); iter_ptrn != ptrn->end(); iter_ptrn++) {
+		for (iter_ptrn = ptrn->begin(); iter_ptrn != ptrn->end(); ++iter_ptrn) {
 			uroute_t route;
 			find_route(&route, namelist->at(iter_ptrn->first), namelist->at(iter_ptrn->second));
 			insert_route_into_cable_cong_map(&cable_cong, &route);
@@ -369,7 +369,7 @@ void simulation_sum_max_cong(ptrn_t *ptrn, namelist_t *namelist, int state) {
 	static int sum_max_congestions = 0;
 
 	if (state == RUN) {
-		for (iter_ptrn = ptrn->begin(); iter_ptrn != ptrn->end(); iter_ptrn++) {
+		for (iter_ptrn = ptrn->begin(); iter_ptrn != ptrn->end(); ++iter_ptrn) {
 			uroute_t route;
 			find_route(&route, namelist->at(iter_ptrn->first), namelist->at(iter_ptrn->second));
 			insert_route_into_cable_cong_map(&cable_cong, &route);
@@ -728,7 +728,7 @@ void shuffle_namelist(namelist_t *namelist) {
 void insert_route_into_cable_cong_map(cable_cong_map_t *cable_cong, uroute_t *route) {
 
 	uroute_t::iterator iter_route;
-	for (iter_route = route->begin(); iter_route != route->end(); iter_route++) {
+	for (iter_route = route->begin(); iter_route != route->end(); ++iter_route) {
 		std::pair<cable_cong_map_t::iterator, bool> ret;
 
 		ret = cable_cong->insert(std::make_pair(*iter_route, 1));
@@ -742,7 +742,7 @@ std::string lookup(int nodenumber, namelist_t *namelist) {
 	namelist_t::iterator iter;
 	int counter = 0;
 
-	for (iter = namelist->begin(); iter != namelist->end(); iter++) {
+	for (iter = namelist->begin(); iter != namelist->end(); ++iter) {
 		if (counter == nodenumber) return *iter;
 		counter++;
 	}
@@ -757,7 +757,7 @@ void get_max_congestion(uroute_t *route, cable_cong_map_t *cable_cong, int *weig
 	int loc_weight = 0;
 
 	/* go over the physical edges of the route */
-	for (route_iter = route->begin(); route_iter != route->end(); route_iter++) {
+	for (route_iter = route->begin(); route_iter != route->end(); ++route_iter) {
 
 		cable_cong_map_t::iterator it;
 		it = cable_cong->find(*route_iter);
@@ -1223,7 +1223,7 @@ void generate_namelist_by_name(IN char *method,
 void allreduce_contig_int_map(std::map<int,int> *map) {
 	// find maximum key element in map
 	unsigned int max = 0;
-	for(std::map<int, int>::iterator i=map->begin(); i!=map->end(); i++) {
+	for(std::map<int, int>::iterator i=map->begin(); i!=map->end(); ++i) {
 		if(i->first > max) max = i->first;
 	}
 
@@ -1235,7 +1235,7 @@ void allreduce_contig_int_map(std::map<int,int> *map) {
 	int *sfield = (int*)calloc(gmax+1,sizeof(int));
 	int *rfield = (int*)calloc(gmax+1,sizeof(int));
 	// fill the field with the map contents
-	for(std::map<int, int>::iterator i=map->begin(); i!=map->end(); i++) {
+	for(std::map<int, int>::iterator i=map->begin(); i!=map->end(); ++i) {
 		assert(i->first <= gmax);
 		sfield[i->first] = i->second;
 	}

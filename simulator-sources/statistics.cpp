@@ -52,7 +52,7 @@ void apply_cable_cong_map_to_global_cable_cong_map(cable_cong_map_t *cable_cong)
 	
 	cable_cong_map_t::iterator iter;
 
-	for (iter = cable_cong->begin(); iter != cable_cong->end(); iter++) {
+	for (iter = cable_cong->begin(); iter != cable_cong->end(); ++iter) {
 		std::pair<cable_cong_map_t::iterator, bool> ret;
 		ret = cable_cong_global.insert(std::make_pair(iter->first, iter->second));
 		if (ret.second == false) {
@@ -78,7 +78,7 @@ void add_to_bigbucket(int *buffer, int size) {
 void insert_into_bucket_maxcon2(cable_cong_map_t *cable_cong, ptrn_t *ptrn, namelist_t *namelist, bucket_t *bucket) {
 
 	ptrn_t::iterator iter_ptrn;
-	for (iter_ptrn = ptrn->begin(); iter_ptrn != ptrn->end(); iter_ptrn++) {
+	for (iter_ptrn = ptrn->begin(); iter_ptrn != ptrn->end(); ++iter_ptrn) {
 		/* we need to re-generate the route ... this could also be
 		* stored in the previous step
 		* timos: I don't think so, It would be better to implement a "cache"
@@ -187,7 +187,7 @@ void print_raw_data(FILE *fd) {
 	}
 
 	std::map<double, int>::iterator iter;
-	for( iter = bucket.begin(); iter != bucket.end(); iter++ ) {
+	for( iter = bucket.begin(); iter != bucket.end(); ++iter ) {
 		fprintf(fd, "Congestion sum of %.0f occured %i times.\n", iter->first, iter->second);
 	}
 
@@ -210,7 +210,7 @@ void print_raw_data_max_delay(FILE *fd) {
 	}
 
 	std::map<double, int>::iterator iter;
-	for( iter = bucket.begin(); iter != bucket.end(); iter++ ) {
+	for( iter = bucket.begin(); iter != bucket.end(); ++iter ) {
 		fprintf(fd, "Delay of %.0f occured %i times.\n", iter->first, iter->second);
 	}
 
@@ -309,9 +309,8 @@ void print_cable_cong(FILE *fd) {
 	cable_cong_map_t::iterator iter;
 	
 	fprintf(fd, "\nCable Congestions:\n\n Edge-ID\tacc. cong\n");
-	for (iter = cable_cong_global.begin(); iter != cable_cong_global.end(); iter++) {
+	for (iter = cable_cong_global.begin(); iter != cable_cong_global.end(); ++iter)
 		fprintf(fd, "%i\t%i\n", iter->first, iter->second);
-	}
 }
 
 int get_congestion_by_edgeid(int eid) {
@@ -326,7 +325,7 @@ int get_max_from_global_cong_map() {
 	cable_cong_map_t::iterator iter;
 	int max=0;
 
-	for (iter = cable_cong_global.begin(); iter != cable_cong_global.end(); iter++) {
+	for (iter = cable_cong_global.begin(); iter != cable_cong_global.end(); ++iter) {
 		if (iter->second > max) max = iter->second;
 	}
 	return max;

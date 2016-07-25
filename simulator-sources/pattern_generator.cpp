@@ -488,7 +488,7 @@ void printptrn(ptrn_t *ptrn, namelist_t *namelist) {
 	}
 
 	printf("\nUsed Pattern:\n=================\n");
-	for(iter = ptrn->begin(); iter != ptrn->end(); iter++) {
+	for(iter = ptrn->begin(); iter != ptrn->end(); ++iter) {
 		printf("% 5i -> %-5i   |   %s -> %s\n",
 		       iter->first, iter->second,
 		       namelist->at(iter->first).data(),
