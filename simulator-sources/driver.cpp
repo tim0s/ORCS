@@ -118,8 +118,9 @@ int main(int argc, char *argv[]) {
 		print_commandline_options(stdout, &cmdargs);
 
 		if (cmdargs.args_info.checkinputfile_given) {
-			std::cout << "Number of hosts in the inputfile: " << complete_namelist.size() << "\n";
-			std::cout << "Number of nodes in the inputfile: " << agnnodes(mygraph) << "\n";
+			printf("   Number of hosts in the inputfile: %d\n", complete_namelist.size());
+			printf("Number of switches in the inputfile: %d\n", agnnodes(mygraph) - complete_namelist.size());
+			printf("   Number of edges in the inputfile: %d\n", agnedges(mygraph));
 
 			for (i = 0; i < complete_namelist.size(); i++) {
 				for (j = 0; j < complete_namelist.size(); j++) {
@@ -167,9 +168,10 @@ int main(int argc, char *argv[]) {
 	bcast_guidlist(&nodeorder_guidlist, mynode);
 
 	if(mynode == 0) {
-		std::cout << "   Number of hosts in the subset: " << namelist.size() << "\n";
-		std::cout << "Number of nodes in the inputfile: " << agnnodes(mygraph) << "\n";
-		std::cout << "Number of edges in the inputfile: " << agnedges(mygraph) << "\n";
+		printf("      Number of hosts in the subset: %d\n", namelist.size());
+		printf("   Number of hosts in the inputfile: %d\n", complete_namelist.size());
+		printf("Number of switches in the inputfile: %d\n", agnnodes(mygraph) - complete_namelist.size());
+		printf("   Number of edges in the inputfile: %d\n", agnedges(mygraph));
 	}
 
 	/* Assess the quality of the routing table */
