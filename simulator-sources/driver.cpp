@@ -28,7 +28,7 @@ extern void perform_sanity_checks_in_args(IN OUT cmdargs_t *cmdargs,
                                           IN int my_mpi_rank);
 extern void cleanup_args(IN char *ptrn, void *ptrnarg);
 
-int main(int argc, char *argv[]) {
+int main(int argc, char **argv) {
 	
 	// MPI variables, comm_rank and comm_size
 	int mynode, allnodes;
@@ -44,6 +44,7 @@ int main(int argc, char *argv[]) {
 		MPI_Finalize();
 		exit(EXIT_FAILURE);
 	}
+
 	perform_sanity_checks_in_args(&cmdargs, mynode);
 
 	if (cmdargs.args_info.getnumlevels_given) {
