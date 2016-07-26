@@ -819,6 +819,9 @@ void my_mpi_init(int *argc, char ***argv, int *rank, int *comm_size) {
 		int line_size = 0, name_size;
 
 		printf("Total MPI threads participating in the simulation: '%d'\n", *comm_size);
+
+		/* Print a nicely formatted list of unique nodes that
+		 * participate in the simulation */
 		printf("Unique hosts participating:\n");
 		for (i = 0; i < *comm_size; i++) {
 			bool already_printed = false;
@@ -848,6 +851,7 @@ void my_mpi_init(int *argc, char ***argv, int *rank, int *comm_size) {
 		}
 		printf("\n\n");
 
+		/* If verbose, print a hello from each MPI node */
 		for(i = 1; i < *argc; i++) {
 			if (strcmp((*argv)[i], "-v") == 0 ||
 			        strcmp((*argv)[i], "--verbose") == 0) {
