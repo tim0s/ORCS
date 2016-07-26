@@ -1195,7 +1195,6 @@ exit:
 void print_commandline_options(FILE *fd, cmdargs_t *cmdargs) {
 	fprintf(fd, "Input File: %s\n", cmdargs->args_info.input_file_arg);
 	fprintf(fd, "Output File: %s\n", cmdargs->args_info.output_file_arg);
-	fprintf(fd, "Commsize: %d\n", cmdargs->args_info.commsize_arg);
 	if (strcmp(cmdargs->args_info.ptrn_arg, "ptrnvsptrn") == 0) {
 		ptrnvsptrn_t ptrnvsptrn = *((ptrnvsptrn_t *)cmdargs->ptrnarg);
 
@@ -1211,11 +1210,14 @@ void print_commandline_options(FILE *fd, cmdargs_t *cmdargs) {
 		        cmdargs->ptrnarg ? "," : "",
 		        cmdargs->ptrnarg ? cmdargs->args_info.ptrnarg_arg : "");
 	}
+	fprintf(fd, "Commsize: %d\n", cmdargs->args_info.commsize_arg);
+	fprintf(fd, "Part_commsize: %d\n", cmdargs->args_info.part_commsize_arg);
+	fprintf(fd, "Subset: %s\n", cmdargs->args_info.subset_arg);
+	fprintf(fd, "Part_subset: %s\n", cmdargs->args_info.part_subset_arg);
 	fprintf(fd, "Level: %d\n", cmdargs->args_info.ptrn_level_arg);
 	fprintf(fd, "Runs: %d\n", cmdargs->args_info.num_runs_arg);
-	fprintf(fd, "Subset: %s\n", cmdargs->args_info.subset_arg);
 	fprintf(fd, "Metric: %s\n", cmdargs->args_info.metric_arg);
-	fprintf(fd, "Part_commsize: %i\n\n", cmdargs->args_info.part_commsize_arg);
+	fprintf(fd, "Shuffling namelists: %s\n\n", (cmdargs->args_info.do_not_shuffle_given) ? "No" : "Yes");
 }
 
 void print_results(cmdargs_t *cmdargs, int mynode, int allnodes) {
