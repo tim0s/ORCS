@@ -13,6 +13,12 @@
 #define RUN 100
 #define ACCOUNT 101
 #define PARSE_GUID_BUFLEN  256
+
+#define READCHAR_BUFFER 65536
+#define CHARBUF_INCREMENT_SIZE 1048576
+
+#define MAX_CHARS_PER_LINE 80
+
 #define MAX_ARG_SIZE 256  /* Defines the maximum ptrnarg size */
 #define MAX_PTRNVSPTRN_ARG_SIZE (MAX_ARG_SIZE * 4 + 1) /* Because in the ptrnvsptrn we need to pass 4 args, have
                                                         * a separate definition for the max ptrnvsptrn size */
@@ -40,12 +46,14 @@ typedef struct {
 
 typedef struct {
 	int num_receivers;
-	double chance_to_send_to_a_receiver;
-	double chance_to_not_send_at_all;
+	double chance_to_communicate_with_a_receiver;
+	double chance_to_not_communicate_at_all;
+	char choose_src_method[10];
 } receivers_t;
 
-typedef std::pair<int, int> pair_t;
-typedef std::vector<pair_t> ptrn_t;
+typedef std::pair<int, int> int_pair_t;
+typedef std::vector<int_pair_t> int_pair_vec_t;
+typedef int_pair_vec_t ptrn_t;
 
 typedef std::pair<std::string, std::string> edge_t; 
 typedef int edgeid_t;
@@ -85,11 +93,20 @@ void simulation_dep_max_delay(cmdargs_t *cmdargs, namelist_t *namelist, int vali
 void simulation_get_cable_cong(ptrn_t *ptrn, namelist_t *namelist, int state);
 void print_commandline_options(FILE *fd, cmdargs_t *cmdargs);
 void print_results(cmdargs_t *cmdargs, int mynode, int allnodes);
-void print_namelist(namelist_t *namelist);
-void generate_namelist_by_name(char *method, namelist_t *namelist, int comm_size);
-void generate_random_namelist(namelist_t *namelist, int comm_size);
-void generate_linear_namelist_bfs(namelist_t *namelist, int comm_size);
-void generate_linear_namelist_guid_order(namelist_t *namelist, int comm_size, bool asc);
+void print_namelist(namelist_t *namelist, const char *header);
+void generate_namelist_by_name(IN char *method,
+                               OUT namelist_t *namelist,
+                               IN int comm_size,
+                               IN namelist_t *namelist_pool = NULL);
+void generate_random_namelist(OUT namelist_t *namelist,
+                              IN int comm_size,
+                              IN namelist_t *namelist_pool);
+void generate_linear_namelist_bfs(OUT namelist_t *namelist,
+                                  IN int comm_size);
+void generate_linear_namelist_guid_order(OUT namelist_t *namelist,
+                                         IN int comm_size,
+                                         IN namelist_t *namelist_pool,
+                                         IN bool asc = true);
 void shuffle_namelist(namelist_t *namelist);
 void simulate(used_edges_t *edge_list,  ptrn_t *ptrn, int num_runs);
 void find_route(uroute_t *route, std::string n1, std::string n2);
@@ -103,16 +120,16 @@ void get_namelist_from_guidlist(IN guidlist_t *guidlist,
 void get_namelist_from_graph(OUT namelist_t *namelist);
 void get_namelist_from_graph(OUT namelist_t *namelist,
                              OUT guidlist_t *guidlist);
-void generate_random_mapping(named_ptrn_t *mapping, ptrn_t *ptrn);
-void insert_route_into_uedgelist(used_edges_t *edge_list, route_t *route);
 std::string lookup(int nodenumber, namelist_t *namelist);
-void printmapping(named_ptrn_t *mapping);
 void my_mpi_init(int *argc, char ***argv, int *rank, int *comm_size);
-void read_input_graph(char *filename);
+void read_input_graph(char *filename, int my_mpi_rank);
 void read_node_ordering(IN char *filename,
                         OUT guidlist_t *guidorder_list);
-void bcast_namelist(namelist_t *namelist, int comm_size, int rank);
-void exchange_results(int mynode, int allnodes, double result);
+void bcast_guidlist(guidlist_t *guidlist, int my_mpi_rank);
+void bcast_namelist(namelist_t *namelist, int my_mpi_rank);
+void print_namelist_from_all(IN namelist_t *namelist,
+                             IN int my_mpi_rank,
+                             IN int commsize);
 void exchange_results2(int mynode, int allnodes);
 void insert_route_into_cable_cong_map(cable_cong_map_t *cable_cong, uroute_t *route);
 void get_max_congestion(uroute_t *route, cable_cong_map_t *cable_cong, int *weight);
@@ -128,14 +145,15 @@ inline void print_once(bool respect_print_once, const char *fmt, ...) {
 	va_start(list, fmt);
 
 	if (respect_print_once) {
-		if (!__printed_once) {
-			__printed_once = true;
-
+		if (!__printed_once)
 			vprintf(fmt, list);
-		}
-	} else {
+	} else
 		vprintf(fmt, list);
-	}
+
+	/* No matter if we respect or not respect the print_once, when
+	 * we reach at this point the message has been printed at least once.
+	 * So set the __printed_once variable to true. */
+	__printed_once = true;
 
 	va_end(list);
 }

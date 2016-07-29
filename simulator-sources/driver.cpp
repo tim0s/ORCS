@@ -24,56 +24,93 @@
 
 Agraph_t *mygraph;
 
-extern void perform_sanity_checks_in_args(IN OUT cmdargs_t *cmdargs);
+extern void perform_sanity_checks_in_args(IN OUT cmdargs_t *cmdargs,
+                                          IN int my_mpi_rank);
 extern void cleanup_args(IN char *ptrn, void *ptrnarg);
 
-int main(int argc, char *argv[]) {
+int main(int argc, char **argv) {
 	
 	// MPI variables, comm_rank and comm_size
 	int mynode, allnodes;
-	namelist_t namelist, complete_namelist, nodeorder_namelist, final_namelist;
-	guidlist_t guidlist, complete_guidlist, nodeorder_guidlist;
+	namelist_t namelist, part_namelist, complete_namelist, nodeorder_namelist, final_namelist;
+	guidlist_t guidlist, part_guidlist, complete_guidlist, nodeorder_guidlist;
 	int i, j;
 
 	cmdargs_t cmdargs;
 
-	if (cmdline_parser(argc, argv, &cmdargs.args_info) != 0) exit(EXIT_FAILURE);
-	perform_sanity_checks_in_args(&cmdargs);
-	
+	my_mpi_init(&argc, &argv, &mynode, &allnodes);
+
+	if (cmdline_parser(argc, argv, &cmdargs.args_info) != 0) {
+		MPI_Finalize();
+		exit(EXIT_FAILURE);
+	}
+
+	perform_sanity_checks_in_args(&cmdargs, mynode);
+
 	if (cmdargs.args_info.getnumlevels_given) {
 		int level = 0;
 		while (1) {
 			ptrn_t ptrn;
 			
-			//void genptrn_by_name(ptrn_t *ptrn, char *name, char *frsname, char *secname, int comm_size, int partcomm_size, int level) {
 			genptrn_by_name(&ptrn, cmdargs.args_info.ptrn_arg, cmdargs.ptrnarg,
 			                cmdargs.args_info.commsize_arg, cmdargs.args_info.part_commsize_arg,
-			                level);
+			                level, mynode);
 			if (ptrn.size() == 0) { break; }
 
 			level++; //proceed to next level
 		}
-		std::cout << "The given input configuration would result in a " << level << " level simulation." << std::endl;
+		if (mynode == 0)
+			printf("The given input configuration would result in a %d-level simulation.\n", level);
 		return level;
 	}
 
-	my_mpi_init(&argc, &argv, &mynode, &allnodes);
-
-	/* should only be done on rank 0 */
-	read_input_graph(cmdargs.args_info.input_file_arg);
+	read_input_graph(cmdargs.args_info.input_file_arg, mynode);
 	tag_edges(mygraph);
 
 	/* Read the node ordering if provided */
-	read_node_ordering(cmdargs.args_info.node_ordering_file_arg, &nodeorder_guidlist);
+	if (mynode == 0)
+		read_node_ordering(cmdargs.args_info.node_ordering_file_arg,
+						   &nodeorder_guidlist);
 
 	/* Read the complete namelist and store it in a temporary vector */
 	get_namelist_from_graph(&complete_namelist);
 
-	if (cmdargs.args_info.commsize_arg == 0) {
+	/* The command line argument sanity checks "should" be placed in the cmdline_extended.cpp
+	 * but here we need the get_namelist_from_graph to run first in order to perform the sanity
+	 * check for the commsize and part_commsize, that is why we have these two here:
+	 *
+	 * Check that we have a sane commsize */
+	if (complete_namelist.size() < 4) {
+
+		if (mynode == 0)
+			fprintf(stderr, "ERROR: The dot file you provided contains the less than four hosts.\n"
+				    "       The simulator needs at least four hosts to run\n"
+					"");
+		MPI_Finalize();
+		exit(EXIT_FAILURE);
+
+	} else if (cmdargs.args_info.commsize_arg == 0) {
+
 		cmdargs.args_info.commsize_arg = complete_namelist.size() - complete_namelist.size() % 2;
-	} else if (cmdargs.args_info.commsize_arg > complete_namelist.size()) {
-		printf("You chose a very large 'commsize'.\n"
-		       "The maximum possible communication size is %d\n", complete_namelist.size());
+
+	} else if (cmdargs.args_info.commsize_arg < 4 ||
+	           cmdargs.args_info.commsize_arg > complete_namelist.size()) {
+
+		if (mynode == 0)
+			fprintf(stderr, "ERROR: The communicator size (commsize) should be a number between '%d' and '%d'\n"
+				    "       You provided '%d'.\n", 4, complete_namelist.size(), cmdargs.args_info.commsize_arg);
+		MPI_Finalize();
+		exit(EXIT_FAILURE);
+
+	}
+
+	/* Check that the we have a sane part_commsize (min 2, and always smaller than commsize) */
+	if (cmdargs.args_info.part_commsize_arg < 2 ||
+	        cmdargs.args_info.part_commsize_arg >= cmdargs.args_info.commsize_arg) {
+		if (mynode == 0)
+			fprintf(stderr, "ERROR: The first-part communicator size (part_commsize) should be a number between '%d' and '%d'\n"
+				    "       You provided '%d'.\n", 2, cmdargs.args_info.commsize_arg - 1, cmdargs.args_info.part_commsize_arg);
+		MPI_Finalize();
 		exit(EXIT_FAILURE);
 	}
 
@@ -82,8 +119,9 @@ int main(int argc, char *argv[]) {
 		print_commandline_options(stdout, &cmdargs);
 
 		if (cmdargs.args_info.checkinputfile_given) {
-			std::cout << "Number of hosts in the inputfile: " << complete_namelist.size() << "\n";
-			std::cout << "Number of nodes in the inputfile: " << agnnodes(mygraph) << "\n";
+			printf("   Number of hosts in the inputfile: %d\n", complete_namelist.size());
+			printf("Number of switches in the inputfile: %d\n", agnnodes(mygraph) - complete_namelist.size());
+			printf("   Number of edges in the inputfile: %d\n", agnedges(mygraph));
 
 			for (i = 0; i < complete_namelist.size(); i++) {
 				for (j = 0; j < complete_namelist.size(); j++) {
@@ -93,28 +131,51 @@ int main(int argc, char *argv[]) {
 				}
 			}
 			printf("Completed\n");
-			return 0;
+			return EXIT_SUCCESS;
 		}
 
 		/* we have to use all hosts for the route quality assessment */
 		if (cmdargs.args_info.routequal_given) cmdargs.args_info.commsize_arg = complete_namelist.size();
 	}
 
-	/* get a list of all endpoint-names that we will work with from the dot-file
+	/* Get a list of all endpoint-names that we will work with from the dot-file
 	 * This list, the namelist, may be a subset of the complete list. */
 	if (mynode == 0)
-		generate_namelist_by_name(cmdargs.args_info.subset_arg, &namelist, cmdargs.args_info.commsize_arg);
+		generate_namelist_by_name(cmdargs.args_info.subset_arg, &namelist,
+		                          cmdargs.args_info.commsize_arg);
 
-	/* distribute namelist from root to all nodes */
-	bcast_namelist(&namelist, allnodes, mynode);
+	/* If the part_subset_art is not "none", we need to process the part_subset */
+	if (strcmp(cmdargs.args_info.part_subset_arg, "none") != 0) {
+		/* The part_subset_arg can be 'linear_bfs' ONLY if the subset_arg is
+		 * 'linear_bfs' as well. */
+		if (strcmp(cmdargs.args_info.part_subset_arg, "linear_bfs") == 0 &&
+				strcmp(cmdargs.args_info.subset_arg, "linear_bfs") != 0) {
+			if (mynode == 0)
+				fprintf(stderr, "ERROR: 'part_subset' can be 'linear_bfs' only if 'subset' is 'linear_bfs' as well.\n");
+			MPI_Finalize();
+			exit(EXIT_FAILURE);
+		}
 
-	/* assess the quality of the routing table */
-	if(mynode == 0) {
-		std::cout << "Number of hosts in the inputfile: " << namelist.size() << "\n";
-		std::cout << "Number of nodes in the inputfile: " << agnnodes(mygraph) << "\n";
-		std::cout << "Number of edges in the inputfile: " << agnedges(mygraph) << "\n";
+		/* Choose the part_subset from the namelist and store in the part_namelist */
+		if (mynode == 0)
+			generate_namelist_by_name(cmdargs.args_info.part_subset_arg, &part_namelist,
+			                          cmdargs.args_info.part_commsize_arg, &namelist);
 	}
 
+	/* Distribute namelist, part_namelist and nodeorder_guidlist from root to all nodes */
+	bcast_namelist(&namelist, mynode);
+	if (strcmp(cmdargs.args_info.part_subset_arg, "none") != 0)
+		bcast_namelist(&part_namelist, mynode);
+	bcast_guidlist(&nodeorder_guidlist, mynode);
+
+	if(mynode == 0) {
+		printf("      Number of hosts in the subset: %d\n", namelist.size());
+		printf("   Number of hosts in the inputfile: %d\n", complete_namelist.size());
+		printf("Number of switches in the inputfile: %d\n", agnnodes(mygraph) - complete_namelist.size());
+		printf("   Number of edges in the inputfile: %d\n", agnedges(mygraph));
+	}
+
+	/* Assess the quality of the routing table */
 	if (cmdargs.args_info.routequal_given) {
 		cable_cong_map_t cable_cong;
 		int nconn = namelist.size()*namelist.size();
@@ -156,7 +217,7 @@ int main(int argc, char *argv[]) {
 					find_route(&route, namelist.at(src), namelist.at(tgt));
 
 					int max = 0;
-					for(uroute_t::iterator iter=route.begin(); iter!=route.end(); iter++) {
+					for(uroute_t::iterator iter=route.begin(); iter!=route.end(); ++iter) {
 						//printf("%i\n", cable_cong[*iter]);
 						/* do not evaluate the first and last edge! */
 						if(iter != route.begin() && (iter+1) != route.end()) {
@@ -176,26 +237,24 @@ int main(int argc, char *argv[]) {
 		if(allnodes > 1) allreduce_contig_int_map(&bins);
 
 		if(mynode == 0) {
-			printf("gmin: %i, gmax: %i\n", gmin, gmax);
+			printf("gmin: %u, gmax: %u\n", gmin, gmax);
 
 			// erase 0
 			bins[0] = 0;
 
 			// get number of elements in bins
 			float sum=0;
-			for(std::map<int, int>::iterator i=bins.begin(); i!=bins.end(); i++) {
-				sum+=i->second;
-			}
+			for(std::map<int, int>::iterator i=bins.begin(); i!=bins.end(); ++i)
+				sum += i->second;
 
 			// get probability for each key
 			std::map<int, float> prob;
-			for(std::map<int, int>::iterator i=bins.begin(); i!=bins.end(); i++) {
+			for(std::map<int, int>::iterator i=bins.begin(); i!=bins.end(); ++i)
 				prob[i->first] = (float)i->second/sum;
-			}
 
 			// get E and V
 			float E=0,V=0;
-			for(std::map<int, int>::iterator i=bins.begin(); i!=bins.end(); i++) {
+			for(std::map<int, int>::iterator i=bins.begin(); i!=bins.end(); ++i) {
 				E += i->first*prob[i->first];
 				V += (i->first*i->first)*prob[i->first];
 			}
@@ -207,54 +266,98 @@ int main(int argc, char *argv[]) {
 		}
 
 		MPI_Finalize();
-		return 0;
+		return EXIT_SUCCESS;
 	}
 
-	/* If the user has provided a nodeorder guid list we may need to modify the namelist */
+	/* If the user has provided a nodeorder guid list we may need to modify the namelist,
+	 * or the part_namelist if the part_subset_arg is not "none". */
 	if (nodeorder_guidlist.size()) {
-		/* Get the complete GUID list */
-		get_guidlist_from_namelist(&complete_namelist, &complete_guidlist);
+		namelist_t *tmp_namelist;
+		guidlist_t *tmp_guidlist;
 
-		/* Get the shuffled GUID list */
-		get_guidlist_from_namelist(&namelist, &guidlist);
-
-		/* First remove the nodeorder guids that do not exist in the shuffle_namelist */
-		bool found;
-		std::vector<unsigned long long>::iterator ull_iter;
-		for (ull_iter = nodeorder_guidlist.begin(); ull_iter != nodeorder_guidlist.end(); ) {
-			found = false;
-
-			for (i = 0; i < guidlist.size(); i++) {
-				if (*ull_iter == guidlist.at(i)) {
-					found = true;
-					break;
-				}
-			}
-
-			if (!found)
-				ull_iter = nodeorder_guidlist.erase(ull_iter);
-			else
-				ull_iter++;
+		if (strcmp(cmdargs.args_info.part_subset_arg, "none") != 0) {
+			/* If a part subset is provided, the node ordering applies to this part subset
+			 * only. So se the tmp_namelist to the corresponding data structures. */
+			tmp_namelist = &part_namelist;
+			tmp_guidlist = &part_guidlist;
+		} else {
+			/* If the part subset is not provided... business as usual. Deal with the
+			 * default namelist */
+			tmp_namelist = &namelist;
+			tmp_guidlist = &guidlist;
 		}
 
+		/* Get the complete numeric GUID list */
+		get_guidlist_from_namelist(&complete_namelist, &complete_guidlist);
+
+		/* Get the shuffled numeric GUID list */
+		get_guidlist_from_namelist(tmp_namelist, tmp_guidlist);
+
+		/** We use the numeric GUID lists for the comparisons, because the
+		 *  nodeorder_guidlist is already in anumeric format. */
+
+		/* First remove the nodeorder guids that do not exist in the namelist (tmp_guidlist).
+		 * For example, if the user asks for the nodeorder of GUIDs 0x100, 0x2, 0x10, 0x1
+		 * but GUID 0x100 do not exist at all in the namelist/guidlist (either
+		 * mistake from the user, or the user is using a subset and GUID 0x100 is not
+		 * part of that subset), then we need to remove 0x100 from this list. */
+		std::vector<unsigned long long>::iterator ull_iter;
+		for (ull_iter = nodeorder_guidlist.begin(); ull_iter != nodeorder_guidlist.end(); ) {
+			if (std::find(tmp_guidlist->begin(), tmp_guidlist->end(), *ull_iter) == tmp_guidlist->end())
+				/* If not found, remove from nodeorder_guidlist */
+				ull_iter = nodeorder_guidlist.erase(ull_iter);
+			else
+				++ull_iter;
+		}
+
+		/* Convert the nodeordered guidlist back to an ordered namelist. Now we are sure that
+		 * all of the nodeorder_namelist entries exist in the namelist that we are going to
+		 * shuffle. */
 		get_namelist_from_guidlist(&nodeorder_guidlist, &complete_namelist, &nodeorder_namelist);
 
-		/* Then remove from the namelist the nodenames that exist in the nodeorder_guidlist */
+		/* Then remove from the namelist (namelist is the list we are going to shuffle) the
+		 * nodenames that exist in the nodeorder_namelist. We will re-add the removed entries
+		 * in the "final_namelist", but after the shuffling of the "namelist" has occured
+		 * (that's how we ensure the node-ordering). */
 		std::vector<std::string>::iterator str_iter;
-		for (str_iter = namelist.begin(); str_iter != namelist.end(); ) {
-			found = false;
+		for (i = 0; i < nodeorder_namelist.size(); i++) {
+			str_iter = std::find(tmp_namelist->begin(), tmp_namelist->end(), nodeorder_namelist.at(i));
+			if (str_iter != tmp_namelist->end())
+				str_iter = tmp_namelist->erase(str_iter); // Erases str_iter and returns the next iter
+		}
+	}
 
-			for (i = 0; i < nodeorder_namelist.size(); i++) {
-				if (!strcmp((*str_iter).data(), nodeorder_namelist.at(i).data())) {
-					found = true;
-					break;
-				}
+	if (strcmp(cmdargs.args_info.part_subset_arg, "none") != 0) {
+
+		/* If the part_subset is not "none", we need to remove the part_namelist
+		 * entries from the namelist in order to ensure we will have unique
+		 * entries in the final_namelist..... */
+		std::vector<std::string>::iterator str_iter;
+		for (i = 0; i < part_namelist.size(); i++) {
+			str_iter = std::find(namelist.begin(), namelist.end(), part_namelist.at(i));
+			if (str_iter != namelist.end())
+				str_iter = namelist.erase(str_iter);
+		}
+
+		/* .....as well as any entries from the nodeorder_namelist. */
+		for (i = 0; i < nodeorder_namelist.size(); i++) {
+			str_iter = std::find(namelist.begin(), namelist.end(), nodeorder_namelist.at(i));
+			if (str_iter != namelist.end())
+				str_iter = namelist.erase(str_iter);
+		}
+	}
+
+	if (mynode == 0) {
+		if (cmdargs.args_info.verbose_given) {
+			if (nodeorder_namelist.size() != 0) {
+				print_namelist(&nodeorder_namelist, "NODEORDER_NAMELIST");
 			}
 
-			if (found)
-				str_iter = namelist.erase(str_iter);
-			else
-				str_iter++;
+			if (part_namelist.size() != 0) {
+				print_namelist(&part_namelist, "PART_NAMELIST");
+			}
+
+			print_namelist(&namelist, "NAMELIST");
 		}
 	}
 
@@ -266,11 +369,22 @@ int main(int argc, char *argv[]) {
 		if(level < 0) level = 0;
 
 		/* Shuffle the list */
-		shuffle_namelist(&namelist);
+		if (!cmdargs.args_info.do_not_shuffle_given)
+			shuffle_namelist(&namelist);
 
 		/* Copy the shuffled list to the final_namelist. The final_namelist
 		 * will be used to run the simulations. However, */
 		final_namelist = namelist;
+
+		/* If we use a subset for the first-part communicator (only when ptrnvsptrn is used)
+		 * add the part_namelist on top of the existing final_namelist. */
+		if (strcmp(cmdargs.args_info.part_subset_arg, "none") != 0) {
+			if (!cmdargs.args_info.do_not_shuffle_given)
+				shuffle_namelist(&part_namelist);
+
+			for (i = 0; i < part_namelist.size(); i++)
+				final_namelist.insert(final_namelist.begin() + i, part_namelist.at(i));
+		}
 
 		/* If the user has provided a nodeorder guid list we need to push these nodes
 		 * to the front of the final_namelist */
@@ -281,7 +395,10 @@ int main(int argc, char *argv[]) {
 				final_namelist.insert(final_namelist.begin() + i, nodeorder_namelist.at(i));
 		}
 
-		if ((cmdargs.args_info.printnamelist_given) && (mynode == 0)) { print_namelist(&final_namelist); }
+		/* The function print_namelist_from_all used MPI_Send and MPI_Recv
+		 * to print the namelist from all the MPI nodes to node 0. */
+		if (cmdargs.args_info.printnamelist_given)
+			print_namelist_from_all(&final_namelist, mynode, allnodes);
 
 		if(strcmp(cmdargs.args_info.metric_arg, "dep_max_delay") == 0) {
 			simulation_dep_max_delay(&cmdargs, &final_namelist, cmdargs.args_info.part_commsize_arg, mynode);
@@ -296,7 +413,7 @@ int main(int argc, char *argv[]) {
 
 				genptrn_by_name(&ptrn, cmdargs.args_info.ptrn_arg, cmdargs.ptrnarg,
 				                cmdargs.args_info.commsize_arg, cmdargs.args_info.part_commsize_arg,
-				                level);
+				                level, mynode);
 
 				if (ptrn.size()==0 || (cmdargs.args_info.ptrn_level_arg > -1 && level > cmdargs.args_info.ptrn_level_arg)) {break;}
 				if ((cmdargs.args_info.printptrn_given) && (mynode == 0)) { printptrn(&ptrn, &final_namelist); }
@@ -317,14 +434,13 @@ int main(int argc, char *argv[]) {
 		if (run_count > ceil((double) cmdargs.args_info.num_runs_arg / (double) allnodes)) {break;}
 	}
 
-	//	simulation_with_metric(args_info.metric_arg, NULL, &namelist, ACCOUNT);
 	exchange_results_by_metric(cmdargs.args_info.metric_arg, mynode, allnodes);
 	print_results(&cmdargs, mynode, allnodes);
 
-	MPI_Finalize();
 	agclose(mygraph);
 
 	cleanup_args(cmdargs.args_info.ptrn_arg, cmdargs.ptrnarg);
 
+	MPI_Finalize();
 	return EXIT_SUCCESS;
 }

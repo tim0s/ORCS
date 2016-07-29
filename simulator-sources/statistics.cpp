@@ -26,24 +26,26 @@ cable_cong_map_t cable_cong_global;
 
 int *get_bigbucket(int *size) {
 	
-	int *buffer;
+	int *buffer = NULL;
 
 	*size = bigbucket.size();
-	buffer = (int *) malloc(bigbucket.size() * sizeof(int));
-	for (int i = 0; i<bigbucket.size(); i++) {
-		buffer[i] = bigbucket.at(i);
+	if (*size > 0) {
+		buffer = (int *) malloc(bigbucket.size() * sizeof(*buffer));
+		for (int i = 0; i<bigbucket.size(); i++)
+			buffer[i] = bigbucket.at(i);
 	}
 	return buffer;
 }
 
 double *get_results(int *size) {
 	
-	double *results;
+	double *results = NULL;
 
 	*size = acc_bandwidths.size();
-	results = (double *) malloc(acc_bandwidths.size() * sizeof(double));
-	for (int i = 0; i<acc_bandwidths.size(); i++) {
-		results[i] = acc_bandwidths.at(i);
+	if (*size > 0) {
+		results = (double *) malloc(acc_bandwidths.size() * sizeof(*results));
+		for (int i = 0; i<acc_bandwidths.size(); i++)
+			results[i] = acc_bandwidths.at(i);
 	}
 	return results;
 }
@@ -52,7 +54,7 @@ void apply_cable_cong_map_to_global_cable_cong_map(cable_cong_map_t *cable_cong)
 	
 	cable_cong_map_t::iterator iter;
 
-	for (iter = cable_cong->begin(); iter != cable_cong->end(); iter++) {
+	for (iter = cable_cong->begin(); iter != cable_cong->end(); ++iter) {
 		std::pair<cable_cong_map_t::iterator, bool> ret;
 		ret = cable_cong_global.insert(std::make_pair(iter->first, iter->second));
 		if (ret.second == false) {
@@ -75,61 +77,10 @@ void add_to_bigbucket(int *buffer, int size) {
 	}
 }
 
-void insert_into_bucket(used_edges_t *edge_list, named_ptrn_t *mapping, bucket_t *bucket) {
-	/*
-	named_ptrn_t::iterator iter_ptrn;
-	for (iter_ptrn = mapping->begin(); iter_ptrn != mapping->end(); iter_ptrn++) {
-		// we need to re-generate the route ... this could also be
-		// stored in the previous step
-		uroute_t route;
-		find_route(&route, iter_ptrn->first, iter_ptrn->second);
-
-		int weight;
-		get_max_congestion(&route, edge_list, &weight);
-		if (bucket->size() < weight + 1) {
-			bucket->resize( weight+5, 0);
-		}
-		bucket->at(weight) = bucket->at(weight) + 1;
-
-		// The smae for bigbucket
-		if (bigbucket.size() < weight + 1) {
-			bigbucket.resize( weight+5, 0);
-		}
-		bigbucket.at(weight) = bigbucket.at(weight) + 1;
-	}
-*/
-}
-
-void insert_into_bucket_maxcon(used_edges_t *edge_list, ptrn_t *ptrn, namelist_t *namelist, bucket_t *bucket) {
-	/*
-	ptrn_t::iterator iter_ptrn;
-	for (iter_ptrn = ptrn->begin(); iter_ptrn != ptrn->end(); iter_ptrn++) {
-		// we need to re-generate the route ... this could also be
-		// stored in the previous step
-		uroute_t route;
-		find_route(&route, namelist->at(iter_ptrn->first), namelist->at(iter_ptrn->second));
-
-		int weight;
-		get_max_congestion(&route, edge_list, &weight);
-		if (bucket->size() < weight + 1) {
-			bucket->resize( weight+1, 0);
-			bucket->at(weight) = 0;
-		}
-		bucket->at(weight) = bucket->at(weight) + 1;
-
-		// The smae for bigbucket
-		if (bigbucket.size() < weight + 1) {
-			bigbucket.resize( weight+5, 0);
-		}
-		bigbucket.at(weight) = bigbucket.at(weight) + 1;
-	}
-*/
-}
-
 void insert_into_bucket_maxcon2(cable_cong_map_t *cable_cong, ptrn_t *ptrn, namelist_t *namelist, bucket_t *bucket) {
 
 	ptrn_t::iterator iter_ptrn;
-	for (iter_ptrn = ptrn->begin(); iter_ptrn != ptrn->end(); iter_ptrn++) {
+	for (iter_ptrn = ptrn->begin(); iter_ptrn != ptrn->end(); ++iter_ptrn) {
 		/* we need to re-generate the route ... this could also be
 		* stored in the previous step
 		* timos: I don't think so, It would be better to implement a "cache"
@@ -153,39 +104,6 @@ void insert_into_bucket_maxcon2(cable_cong_map_t *cable_cong, ptrn_t *ptrn, name
 		bigbucket.at(weight) = bigbucket.at(weight) + 1;
 	}
 
-}
-
-void print_statistics() {
-
-	int count;
-	double min = 1;
-	double max = 0;
-
-	for (count=0; count<acc_bandwidths.size(); count++) {
-		if (min>acc_bandwidths.at(count)) min = acc_bandwidths.at(count);
-		if (max<acc_bandwidths.at(count)) max = acc_bandwidths.at(count);
-	}
-
-	std::cout << "Statistical Results\n";
-	std::cout << "===================\n";
-	std::cout << "Minimal Bandwidth: " << min << "\n";
-	std::cout << "Maximal Bandwith " << max << "\n";
-	std::cout << "Average Bandwith: " << get_avg_bandwidth() << "\n";
-	std::cout << "Bandwith Variance: " << get_var_bandwidth(get_avg_bandwidth()) << "\n";
-	std::cout << "Possible Error (99%% confidency): " << get_max_error(2.576) << "\n\n";
-	print_histogram(stdout);
-	print_bucket(stdout, &bigbucket);
-	std::cout << "===================\n\n";
-}
-
-void print_vector() {
-	
-	int count;
-
-	for (count=0; count<acc_bandwidths.size(); count++) {
-		std::cout << acc_bandwidths.at(count) << ", ";
-	}
-	std::cout << "\n";
 }
 
 void print_statistics_max_congestions(FILE *fd) {
@@ -233,37 +151,25 @@ void print_statistics_max_delay(FILE *fd) {
 void print_histogram(FILE *fd) {
 
 	int count;
-	double min = 9999999;
-	double max = 0;
 
-	/*	for (count=0; count<acc_bandwidths.size(); count++) {
-		if (min>acc_bandwidths.at(count)) min = acc_bandwidths.at(count);
-		if (max<acc_bandwidths.at(count)) max = acc_bandwidths.at(count);
-	}
-*/
-	/*	if (max == min) {
-		fprintf(fd, "No Histogramm, all values are the same...\n");
-		return;
-	}
-*/
-	//double w = 3.49 * sqrt(get_var_bandwidth(get_avg_bandwidth())) * pow(acc_bandwidths.size(), (double) -1 / 3);
-	//fprintf(fd, "%s %f\n", "Histogramm bin width:", w);
-	double w=0.05;
+	double w = 0.05;
+
 	fprintf(fd, "%s %f\n", "Histogramm bin width:", w);
 	fprintf(fd, "%s\n", "Fraction of full bandwidt | Number of occurences");
-	gsl_histogram *h = gsl_histogram_alloc((size_t)(1.0/w));
-	//gsl_histogram_set_ranges_uniform (h, floor(min), ceil(max));
-	gsl_histogram_set_ranges_uniform (h, 0, 1.01);
-	for (count=0; count<acc_bandwidths.size(); count++) {
+
+	gsl_histogram *h = gsl_histogram_alloc((size_t)(1.0 / w));
+	gsl_histogram_set_ranges_uniform (h, 0, 1.000000000000001);
+
+	for (count = 0; count < acc_bandwidths.size(); count++) {
 		if (gsl_histogram_increment(h, acc_bandwidths.at(count)) != 0) {
 			printf("Moo\n");
 			printf("%f\n", acc_bandwidths.at(count));
-			exit(1);
+			exit(EXIT_FAILURE);
 		}
 	}
+
 	gsl_histogram_fprintf(fd, h, "%12.8f", "%5.0f");
 	gsl_histogram_free(h);
-	std::cout << acc_bandwidths.size() << "\n";
 }
 
 void print_raw_data(FILE *fd) {
@@ -283,7 +189,7 @@ void print_raw_data(FILE *fd) {
 	}
 
 	std::map<double, int>::iterator iter;
-	for( iter = bucket.begin(); iter != bucket.end(); iter++ ) {
+	for( iter = bucket.begin(); iter != bucket.end(); ++iter ) {
 		fprintf(fd, "Congestion sum of %.0f occured %i times.\n", iter->first, iter->second);
 	}
 
@@ -306,7 +212,7 @@ void print_raw_data_max_delay(FILE *fd) {
 	}
 
 	std::map<double, int>::iterator iter;
-	for( iter = bucket.begin(); iter != bucket.end(); iter++ ) {
+	for( iter = bucket.begin(); iter != bucket.end(); ++iter ) {
 		fprintf(fd, "Delay of %.0f occured %i times.\n", iter->first, iter->second);
 	}
 
@@ -352,11 +258,10 @@ double get_max_error(double quantile) {
 
 double get_acc_bandwidth(bucket_t *bucket) {
 
-	int count;
-	double sum=0;
-	double res=0;
-
 	if (bucket->size() != 0) {
+		int count;
+		double sum = 0, res = 0;
+
 		assert(bucket->at(0) == 0);
 		for (count=1; count<bucket->size(); count++) {
 			if (bucket->at(count) > 0) {
@@ -385,9 +290,6 @@ void account_stats(bucket_t *bucket) {
 
 double account_stats_max_congestions(double max_congestions) {
 	
-	float xq=0, sq=0;
-	int count;
-	
 	acc_bandwidths.push_back(max_congestions);
 
 	if (acc_bandwidths.size() > 50) {  // The confidence interval we choose only works for n>50
@@ -409,9 +311,8 @@ void print_cable_cong(FILE *fd) {
 	cable_cong_map_t::iterator iter;
 	
 	fprintf(fd, "\nCable Congestions:\n\n Edge-ID\tacc. cong\n");
-	for (iter = cable_cong_global.begin(); iter != cable_cong_global.end(); iter++) {
+	for (iter = cable_cong_global.begin(); iter != cable_cong_global.end(); ++iter)
 		fprintf(fd, "%i\t%i\n", iter->first, iter->second);
-	}
 }
 
 int get_congestion_by_edgeid(int eid) {
@@ -426,27 +327,12 @@ int get_max_from_global_cong_map() {
 	cable_cong_map_t::iterator iter;
 	int max=0;
 
-	for (iter = cable_cong_global.begin(); iter != cable_cong_global.end(); iter++) {
+	for (iter = cable_cong_global.begin(); iter != cable_cong_global.end(); ++iter) {
 		if (iter->second > max) max = iter->second;
 	}
 	return max;
 
 }
-
-int get_min_from_global_cong_map() {
-
-	cable_cong_map_t::iterator iter;
-	int min=-1;
-
-	for (iter = cable_cong_global.begin(); iter != cable_cong_global.end(); iter++) {
-		if (min == -1) min = iter->second;
-		if (iter->second < min) min = iter->second;
-	}
-	return min;
-
-}
-
-
 
 void print_bucket(FILE *fd, bucket_t *bucket) {
 
