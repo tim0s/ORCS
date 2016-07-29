@@ -137,8 +137,8 @@ for lid in sorted(lid_to_guid.keys()):
 read the routingtable from ibdiagnet.fdbs into the dict routingtable!
 """
 with open(route_file, mode='r', buffering=1) as routes_fd:
-    sw_guid_line_re = re.compile("^osm.*Switch\s+0x(\w+)")
-    lid_line_re = re.compile("^(0x\w+)\s+:\s+(\w+)")
+    sw_guid_line_re = re.compile("^osm_ucast_mgr_dump_ucast_routes:\s+Switch\s+0x(\w+)$")
+    lid_line_re = re.compile("^(0x\w+)\s+:\s+(\d{3})")
     for line in routes_fd:
         # Do not read commented lines or empty lines
         if (r.search(empty_line_re, line)):
