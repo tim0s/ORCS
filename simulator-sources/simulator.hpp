@@ -120,7 +120,6 @@ void get_namelist_from_guidlist(IN guidlist_t *guidlist,
 void get_namelist_from_graph(OUT namelist_t *namelist);
 void get_namelist_from_graph(OUT namelist_t *namelist,
                              OUT guidlist_t *guidlist);
-std::string lookup(int nodenumber, namelist_t *namelist);
 void my_mpi_init(int *argc, char ***argv, int *rank, int *comm_size);
 void read_input_graph(char *filename, int my_mpi_rank);
 void read_node_ordering(IN char *filename,
