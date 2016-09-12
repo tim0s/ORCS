@@ -97,7 +97,7 @@ int main(int argc, char **argv) {
 	           cmdargs.args_info.commsize_arg > complete_namelist.size()) {
 
 		if (mynode == 0)
-			fprintf(stderr, "ERROR: The communicator size (commsize) should be a number between '%d' and '%d'\n"
+			fprintf(stderr, "ERROR: The communicator size (commsize) should be a number between '%d' and '%zu'\n"
 				    "       You provided '%d'.\n", 4, complete_namelist.size(), cmdargs.args_info.commsize_arg);
 		MPI_Finalize();
 		exit(EXIT_FAILURE);
@@ -119,13 +119,15 @@ int main(int argc, char **argv) {
 		print_commandline_options(stdout, &cmdargs);
 
 		if (cmdargs.args_info.checkinputfile_given) {
-			printf("   Number of hosts in the inputfile: %d\n", complete_namelist.size());
+			printf("   Number of hosts in the inputfile: %zu\n", complete_namelist.size());
 			printf("Number of switches in the inputfile: %d\n", agnnodes(mygraph) - complete_namelist.size());
 			printf("   Number of edges in the inputfile: %d\n", agnedges(mygraph));
 
 			for (i = 0; i < complete_namelist.size(); i++) {
 				for (j = 0; j < complete_namelist.size(); j++) {
-					printf("Testing pair number %d of %d\n", i*complete_namelist.size()+j+1, complete_namelist.size()*complete_namelist.size());
+					printf("Testing pair number %zu of %zu\n",
+					       i * complete_namelist.size() + j + 1,
+					       complete_namelist.size() * complete_namelist.size());
 					uroute_t r;
 					find_route(&r, complete_namelist.at(i), complete_namelist.at(j));
 				}
@@ -169,8 +171,8 @@ int main(int argc, char **argv) {
 	bcast_guidlist(&nodeorder_guidlist, mynode);
 
 	if(mynode == 0) {
-		printf("      Number of hosts in the subset: %d\n", namelist.size());
-		printf("   Number of hosts in the inputfile: %d\n", complete_namelist.size());
+		printf("      Number of hosts in the subset: %zu\n", namelist.size());
+		printf("   Number of hosts in the inputfile: %zu\n", complete_namelist.size());
 		printf("Number of switches in the inputfile: %d\n", agnnodes(mygraph) - complete_namelist.size());
 		printf("   Number of edges in the inputfile: %d\n", agnedges(mygraph));
 	}

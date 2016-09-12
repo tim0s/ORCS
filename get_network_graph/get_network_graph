@@ -22,9 +22,21 @@ class quick_regexp(object):
     """
     Quick regular expression class, which can be used directly in if() statements in a perl-like fashion.
 
-    #### Sample code ####
+    The pattern provided in the search function can be either a string with the regex itself, or a compiled
+    regular expression. When you iterate through large sets, it may be worthy to compile the regex first.
+    I have observed more than 30% speed improvement.
+
+    #### Sample code 1 ####
     r = quick_regexp()
     if(r.search('pattern (test) (123)', string)):
+        print(r.groups[0]) # Prints 'test'
+        print(r.groups[1]) # Prints '123'
+
+
+    #### Sample code 2 ####
+    r = quick_regexp()
+    re_compiled = re.compile('pattern (test) (123)')
+    if(r.search(re_compiled, string)):
         print(r.groups[0]) # Prints 'test'
         print(r.groups[1]) # Prints '123'
     """
@@ -33,13 +45,16 @@ class quick_regexp(object):
         self.matched = False
 
     def search(self, pattern, string, flags=0):
-        match = re.search(pattern, string, flags)
+        if isinstance(pattern, re._pattern_type):
+            match = pattern.search(string)
+        else:
+            match = re.search(pattern, string, flags)
+
         if match:
             self.matched = True
             if(match.groups()):
-                self.groups = re.search(pattern, string, flags).groups()
-            else:
-                self.groups = True
+                self.groups = match.groups()
+
         else:
             self.matched = False
             self.groups = None
@@ -71,6 +86,7 @@ def int_to_hex_str(number, hex_length = -2, prefix_with_0x = False):
     return hex_str
 
 r = quick_regexp()
+empty_line_re = re.compile("(^\s*#|^$)")
 graph = {}
 lid_to_guid = {}
 
@@ -80,10 +96,9 @@ Read the topology file and build the translation list for lids to guids
 with open(topo_file, mode='r', buffering=1) as topology_fd:
     for line in topology_fd:
         line = line.strip()
-        isinstance(line, str)
         if line:
             # Do not read commented lines or empty lines
-            if (r.search("(^\s*#|^$)", line)):
+            if (r.search(empty_line_re, line)):
                 continue
 
             # The following regexp will only read the switch port lines from a dump.
@@ -122,16 +137,18 @@ for lid in sorted(lid_to_guid.keys()):
 read the routingtable from ibdiagnet.fdbs into the dict routingtable!
 """
 with open(route_file, mode='r', buffering=1) as routes_fd:
+    sw_guid_line_re = re.compile("^osm_ucast_mgr_dump_ucast_routes:\s+Switch\s+0x(\w+)$")
+    lid_line_re = re.compile("^(0x\w+)\s+:\s+(\d{3})")
     for line in routes_fd:
         # Do not read commented lines or empty lines
-        if (r.search("(^\s*#|^$)", line)):
+        if (r.search(empty_line_re, line)):
             continue
 
-        if(r.search("^osm.*Switch\s+0x(\w+)", line)):
+        if(r.search(sw_guid_line_re, line)):
             # Get the GUID of the switch
             switch = hex_str_to_int(r.groups[0])
 
-        if(r.search("^(0x\w+)\s+:\s+(\w+)", line)):
+        if(r.search(lid_line_re, line)):
             if (r.groups[1] == "UNREACHABLE"):
                 continue
 

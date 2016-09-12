@@ -306,7 +306,7 @@ void simulation_hist_max_cong(ptrn_t *ptrn, namelist_t *namelist, int state) {
 			find_route(&route, namelist->at(iter_ptrn->first), namelist->at(iter_ptrn->second));
 			insert_route_into_cable_cong_map(&cable_cong, &route);
 #ifdef TDEBUG
-			if (i % 100 == 1) {printf("[%i/%i]\n", i, ptrn->size());}
+			if (i % 100 == 1) {printf("[%d/%zu]\n", i, ptrn->size());}
 #endif
 		}
 
@@ -733,18 +733,6 @@ void insert_route_into_cable_cong_map(cable_cong_map_t *cable_cong, uroute_t *ro
 			ret.first->second = ret.first->second + 1;
 		}
 	}
-} 
-
-std::string lookup(int nodenumber, namelist_t *namelist) {
-	namelist_t::iterator iter;
-	int counter = 0;
-
-	for (iter = namelist->begin(); iter != namelist->end(); ++iter) {
-		if (counter == nodenumber) return *iter;
-		counter++;
-	}
-
-	return *iter;
 }
 
 void get_max_congestion(uroute_t *route, cable_cong_map_t *cable_cong, int *weight) {
